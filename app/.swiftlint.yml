@@ -1,0 +1,64 @@
+excluded:
+  - DerivedData
+  - .build
+  - AgileMaestroUITests
+
+disabled_rules:
+  - trailing_whitespace
+
+opt_in_rules:
+  - force_unwrapping
+  - trailing_comma
+  - closure_spacing
+  - empty_count
+  - explicit_init
+  - first_where
+  - modifier_order
+  - overridden_super_call
+  - prohibited_super_call
+  - redundant_nil_coalescing
+  - sorted_first_last
+  - unavailable_function
+  - unneeded_parentheses_in_closure_argument
+  - unused_import
+
+line_length:
+  warning: 120
+  error: 150
+  ignores_urls: true
+  ignores_function_declarations: false
+  ignores_comments: true
+
+file_length:
+  warning: 600
+  error: 800
+
+type_body_length:
+  warning: 300
+  error: 400
+
+function_body_length:
+  warning: 50
+  error: 80
+
+cyclomatic_complexity:
+  warning: 10
+  error: 15
+
+force_unwrapping: warning
+
+identifier_name:
+  min_length:
+    warning: 2
+  excluded:
+    - id
+    - x
+    - y
+    - i
+    - n
+
+nesting:
+  type_level:
+    warning: 3
+  function_level:
+    warning: 4

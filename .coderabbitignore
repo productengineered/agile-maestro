@@ -1,0 +1,3 @@
+# Review ONLY the app/ directory — ignore everything else
+*
+!app/**

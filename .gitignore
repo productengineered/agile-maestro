@@ -1,0 +1,40 @@
+# macOS
+.DS_Store
+*.swp
+*~
+
+# Xcode
+*.xcuserdata/
+*.xcworkspace/xcuserstate
+DerivedData/
+build/
+
+# Dependencies
+Pods/
+Carthage/
+
+# Secrets
+.env
+*.p12
+*.mobileprovision
+
+# Claude Code Toolkit (github.com/productengineered/claude-code-apple-app-toolkit)
+.claude/
+CLAUDE.md
+app/.claude/
+
+# Planning & design docs (local only)
+planning/
+docs/
+
+# Third-party review reports (regenerated each review cycle)
+tools/third-party-reviews/
+app/tools/
+
+# Build artifacts
+*.profraw
+*.ips
+
+# Archive (local only, not tracked)
+zz-archive/
+backups/

@@ -1,0 +1,131 @@
+{
+  "agents": [],
+  "commands": [],
+  "skills": [],
+  "rules": [],
+  "directoryHealth": {
+    "agent_count": 0,
+    "command_count": 0,
+    "skill_count": 0,
+    "rule_count": 0
+  },
+  "workflow_pipelines": [
+    {
+      "id": "epic",
+      "label": "EPIC PIPELINE",
+      "stages": [
+        {
+          "id": "planning",
+          "name": "Planning",
+          "kind": "agent",
+          "agent_name": "planning-agent"
+        },
+        {
+          "id": "design",
+          "name": "Design",
+          "kind": "agent",
+          "agent_name": "designer-agent"
+        },
+        {
+          "id": "implementation",
+          "name": "Implementation",
+          "kind": "agent",
+          "agent_name": "macos-developer-agent"
+        },
+        {
+          "id": "code-review",
+          "name": "Code Review",
+          "kind": "agent",
+          "agent_name": "staff-engineer-agent"
+        },
+        {
+          "id": "qa",
+          "name": "QA",
+          "kind": "agent",
+          "agent_name": "qa-agent"
+        },
+        {
+          "id": "security",
+          "name": "Security",
+          "kind": "agent",
+          "agent_name": "security-audit"
+        },
+        {
+          "id": "product-review",
+          "name": "Product Review",
+          "kind": "agent",
+          "agent_name": "pm-agent"
+        },
+        {
+          "id": "human-uat",
+          "name": "Human UAT",
+          "kind": "human"
+        },
+        {
+          "id": "complete",
+          "name": "Complete",
+          "kind": "terminal"
+        }
+      ]
+    },
+    {
+      "id": "story",
+      "label": "STORY PIPELINE",
+      "stages": [
+        {
+          "id": "implementation",
+          "name": "Implementation",
+          "kind": "agent",
+          "agent_name": "macos-developer-agent"
+        },
+        {
+          "id": "code-review",
+          "name": "Code Review",
+          "kind": "agent",
+          "agent_name": "staff-engineer-agent"
+        },
+        {
+          "id": "qa",
+          "name": "QA",
+          "kind": "agent",
+          "agent_name": "qa-agent"
+        },
+        {
+          "id": "product-review",
+          "name": "Product Review",
+          "kind": "agent",
+          "agent_name": "pm-agent"
+        },
+        {
+          "id": "complete",
+          "name": "Complete",
+          "kind": "terminal"
+        }
+      ]
+    },
+    {
+      "id": "task",
+      "label": "TASK PIPELINE",
+      "stages": [
+        {
+          "id": "implementation",
+          "name": "Implementation",
+          "kind": "agent",
+          "agent_name": "macos-developer-agent"
+        },
+        {
+          "id": "build-verify",
+          "name": "Build Verify",
+          "kind": "agent",
+          "agent_name": "build-engineer-agent"
+        },
+        {
+          "id": "complete",
+          "name": "Complete",
+          "kind": "terminal"
+        }
+      ]
+    }
+  ],
+  "generated_at": "2026-03-05T06:21:00Z"
+}

@@ -1,0 +1,8 @@
+reviews:
+  path_filters:
+    - "app/**"
+    - "!.claude/**"
+    - "!planning/**"
+    - "!tools/**"
+    - "!releases/**"
+    - "!.github/**"
