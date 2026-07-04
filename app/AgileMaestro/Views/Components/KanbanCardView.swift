@@ -72,6 +72,12 @@ struct KanbanCardView: View {
                                 .background(.orange.opacity(0.12), in: Capsule())
                                 .accessibilityHidden(true) // parent label covers it
                         }
+
+                        // Tier-2 UAT badge (R1.5) — epic cards only; absent/malformed
+                        // `uat.tier2` (or unrecognized `result`) renders no badge at all.
+                        if let uat = card.uatTier2, let result = uat.result {
+                            uatBadgeView(result: result, failedCount: uat.failedTests?.count ?? 0, reason: uat.reason)
+                        }
                     }
 
                     // Row 2: Display ID (compact, secondary — e.g. "AM-310-3")
@@ -141,11 +147,82 @@ struct KanbanCardView: View {
         .accessibilityAddTraits(.isButton)
     }
 
+    // MARK: - Tier-2 UAT Badge (SM-EPICCARD-800-T2..T4)
+    // Reuses the exact capsule style as REJECTED/BLOCKED (design1 lock) — same font,
+    // same padding, same opacity(0.12) background pattern. Only the color/text/tooltip differ.
+
+    /// Computes the badge's display text for a given Tier-2 result. Extracted as a pure,
+    /// non-view function (not `private`) so it is directly unit testable, matching the
+    /// `computeSteps(for:)` testability pattern used by `WorkflowStepperView`.
+    static func uatBadgeText(result: UATTier2Result, failedCount: Int) -> String {
+        switch result {
+        case .passed: return "UAT ✓"
+        case .failed: return "UAT ✕ \(failedCount)"
+        case .skipped: return "UAT"
+        }
+    }
+
+    @ViewBuilder
+    private func uatBadgeView(result: UATTier2Result, failedCount: Int, reason: String?) -> some View {
+        switch result {
+        case .passed:
+            Text(Self.uatBadgeText(result: result, failedCount: failedCount))
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(.green)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(.green.opacity(0.12), in: Capsule())
+                .accessibilityHidden(true) // parent cardAccessibilityLabel covers it
+
+        case .failed:
+            Text(Self.uatBadgeText(result: result, failedCount: failedCount))
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(.red)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(.red.opacity(0.12), in: Capsule())
+                .accessibilityHidden(true)
+
+        case .skipped:
+            Text(Self.uatBadgeText(result: result, failedCount: failedCount))
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(Color.secondary.opacity(0.12), in: Capsule())
+                // Sighted-user hover tooltip (IS-BADGE-TOOLTIP-800-4). This is a
+                // SUPPLEMENT to the parent accessibility label below, not a
+                // substitute — .help() is not reliably reachable via VoiceOver
+                // navigation on all controls, so the reason MUST also appear in
+                // cardAccessibilityLabel (IS-800-10).
+                .help(reason ?? "Skipped")
+                .accessibilityHidden(true)
+        }
+    }
+
     // MARK: - Accessibility Label
 
-    private var cardAccessibilityLabel: String {
+    /// Internal (not `private`) so it is directly unit testable, matching the
+    /// `computeSteps(for:)` precedent in `WorkflowStepperView`.
+    var cardAccessibilityLabel: String {
         var label = "\(card.type): \(card.title)"
         if card.reviewResult == "rejected" { label += ", Rejected" } else if card.blocked { label += ", Blocked" }
+
+        // Tier-2 UAT badge (IS-800-10: status + count/reason must be in the label,
+        // never color-only; IS-BADGE-TOOLTIP-800-4: reason reachable without a mouse
+        // hover for VoiceOver users).
+        if let uat = card.uatTier2, let result = uat.result {
+            switch result {
+            case .passed:
+                label += ", Agent UAT passed"
+            case .failed:
+                let count = uat.failedTests?.count ?? 0
+                label += ", Agent UAT failed, \(count) test\(count == 1 ? "" : "s")"
+            case .skipped:
+                label += ", Agent UAT skipped\(uat.reason.map { ", \($0)" } ?? "")"
+            }
+        }
+
         if let progress = card.progress {
             label += ", \(progress.completed) of \(progress.total) \(progress.unit)"
         }

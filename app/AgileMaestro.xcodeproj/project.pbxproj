@@ -104,6 +104,7 @@
 		DCD60B152F5F9185001961EE /* DetailTabsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCD60B142F5F9185001961EE /* DetailTabsView.swift */; };
 		DCD60B172F5F918B001961EE /* WorkflowStepperView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCD60B162F5F918B001961EE /* WorkflowStepperView.swift */; };
 		DCD60B192F5F91DA001961EE /* WorkflowStepperViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCD60B182F5F91DA001961EE /* WorkflowStepperViewTests.swift */; };
+		1F9FA151A15C465F903E58CF /* KanbanCardViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A753C7B26C9A423A9F129DC0 /* KanbanCardViewTests.swift */; };
 		DCD60B1D2F5F9617001961EE /* DescriptionTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCD60B1C2F5F9617001961EE /* DescriptionTabView.swift */; };
 		DCD60B212F5F968A001961EE /* PlanningTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCD60B202F5F968A001961EE /* PlanningTabView.swift */; };
 		DCD60B232F5F96A2001961EE /* ConstraintsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCD60B222F5F96A2001961EE /* ConstraintsTabView.swift */; };
@@ -282,6 +283,7 @@
 		DCD60B142F5F9185001961EE /* DetailTabsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailTabsView.swift; sourceTree = "<group>"; };
 		DCD60B162F5F918B001961EE /* WorkflowStepperView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowStepperView.swift; sourceTree = "<group>"; };
 		DCD60B182F5F91DA001961EE /* WorkflowStepperViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowStepperViewTests.swift; sourceTree = "<group>"; };
+		A753C7B26C9A423A9F129DC0 /* KanbanCardViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KanbanCardViewTests.swift; sourceTree = "<group>"; };
 		DCD60B1C2F5F9617001961EE /* DescriptionTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DescriptionTabView.swift; sourceTree = "<group>"; };
 		DCD60B202F5F968A001961EE /* PlanningTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningTabView.swift; sourceTree = "<group>"; };
 		DCD60B222F5F96A2001961EE /* ConstraintsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConstraintsTabView.swift; sourceTree = "<group>"; };
@@ -512,6 +514,7 @@
 				F66BD55E2F8485F300A30480 /* ClaudeTaskTopologicalSortTests.swift */,
 				382A77846DD178C4290B3751 /* KanbanColumnDefTests.swift */,
 				39D40CA1C5B644768C191568 /* WindowContextTests.swift */,
+				A753C7B26C9A423A9F129DC0 /* KanbanCardViewTests.swift */,
 			);
 			path = AgileMaestroTests;
 			sourceTree = "<group>";
@@ -797,6 +800,7 @@
 				F66BD5442F7B106300A30480 /* TaskMetadataIntegrationTests.swift in Sources */,
 				DCD60AE12F5E7000001961EE /* DetailViewModelTests.swift in Sources */,
 				2F82D393FE41402A92FC474B /* WindowContextTests.swift in Sources */,
+				1F9FA151A15C465F903E58CF /* KanbanCardViewTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
