@@ -96,4 +96,54 @@ final class WindowRegistrySaveCoordinatorTests: XCTestCase {
 
         XCTAssertTrue(mockService.savedSnapshots.isEmpty, "Updating an untracked window must not persist anything")
     }
+
+    // MARK: - openProductIDs() (task AM-803-3, IS-TAB-FOCUS-800-2)
+
+    /// `openProductIDs()` is the live "which products are already open"
+    /// registry the empty-tab CTA's `.focusExisting` routing depends on —
+    /// every tracked `.product` window/tab must be reflected.
+    func testOpenProductIDsReflectsCurrentlyTrackedProductWindows() {
+        let firstID = UUID()
+        let secondID = UUID()
+        sut.windowOpened(identity: .product(firstID), viewMode: .treeDetail, selectedSessionID: nil)
+        sut.windowOpened(identity: .product(secondID), viewMode: .treeDetail, selectedSessionID: nil)
+
+        XCTAssertEqual(sut.openProductIDs(), [firstID, secondID])
+    }
+
+    /// Empty-tab sentinels are not products — they must never appear in the
+    /// set the CTA checks against, or every empty tab would look like an
+    /// "already open" product.
+    func testOpenProductIDsExcludesEmptyTabSentinels() {
+        sut.windowOpened(identity: .newEmptySentinel(), viewMode: .treeDetail, selectedSessionID: nil)
+        let productID = UUID()
+        sut.windowOpened(identity: .product(productID), viewMode: .treeDetail, selectedSessionID: nil)
+
+        XCTAssertEqual(sut.openProductIDs(), [productID])
+    }
+
+    /// Closing a product's window/tab must remove it from the live registry —
+    /// otherwise a closed product would still incorrectly route new
+    /// selections to `.focusExisting` with nothing left to focus.
+    func testOpenProductIDsRemovesEntryAfterWindowClosed() {
+        let productID = UUID()
+        sut.windowOpened(identity: .product(productID), viewMode: .treeDetail, selectedSessionID: nil)
+        XCTAssertEqual(sut.openProductIDs(), [productID])
+
+        sut.windowClosed(identity: .product(productID))
+
+        XCTAssertTrue(sut.openProductIDs().isEmpty)
+    }
+
+    /// Reporting the same identity as opened twice (e.g. a redundant
+    /// `.onAppear` fire) must not produce two entries for one product — the
+    /// registry is keyed by identity, so it cannot itself become a source of
+    /// duplicate live contexts.
+    func testOpenProductIDsStaysSingleValuedWhenSameIdentityReportedTwice() {
+        let productID = UUID()
+        sut.windowOpened(identity: .product(productID), viewMode: .treeDetail, selectedSessionID: nil)
+        sut.windowOpened(identity: .product(productID), viewMode: .kanban, selectedSessionID: nil)
+
+        XCTAssertEqual(sut.openProductIDs(), [productID])
+    }
 }

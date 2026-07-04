@@ -131,4 +131,53 @@ final class WindowReplayPlannerTests: XCTestCase {
 
         XCTAssertTrue(actions.isEmpty)
     }
+
+    // MARK: - No Duplicate Opens For The Same Product (task AM-803-3, IS-TAB-FOCUS-800-2)
+
+    /// Integration proof that the real source of `WindowReplayPlanner`'s
+    /// input — `WindowRegistrySaveCoordinator`'s persisted snapshot — can
+    /// never hand the planner two entries for the same product, so it can
+    /// never emit two `.open` actions for one product. Reports the same
+    /// identity "opened" twice (a defensive/redundant call, exactly the kind
+    /// `WindowRegistrySaveCoordinatorTests` guards at the coordinator level)
+    /// before building the snapshot the planner actually consumes.
+    @MainActor
+    func testPlanNeverEmitsDuplicateOpenActionsForASnapshotBuiltFromTheLiveSaveCoordinator() {
+        let mockService = PlannerMockRegistryService()
+        let coordinator = WindowRegistrySaveCoordinator(registryService: mockService)
+        let productID = UUID()
+
+        coordinator.windowOpened(identity: .product(productID), viewMode: .treeDetail, selectedSessionID: nil)
+        coordinator.windowOpened(identity: .product(productID), viewMode: .kanban, selectedSessionID: nil)
+
+        guard let snapshot = mockService.savedSnapshots.last else {
+            return XCTFail("Expected the coordinator to have persisted a snapshot")
+        }
+        let actions = WindowReplayPlanner.plan(for: snapshot)
+
+        let openCountForProduct = actions.filter {
+            if case .open(let plan) = $0 { return plan.entry.identity == .product(productID) }
+            return false
+        }.count
+        XCTAssertEqual(openCountForProduct, 1, "The same product must never yield two .open actions in the replay plan")
+    }
+}
+
+// MARK: - PlannerMockRegistryService
+
+/// Minimal no-op `WindowRegistryServiceProtocol` used only to observe the
+/// snapshots `WindowRegistrySaveCoordinator` persists, without touching
+/// `UserDefaults`.
+private final class PlannerMockRegistryService: WindowRegistryServiceProtocol, @unchecked Sendable {
+    private(set) var savedSnapshots: [WindowRegistrySnapshot] = []
+
+    func loadLaunchPlan() -> WindowRegistryLaunchPlan {
+        .freshInstall(WindowRegistrySnapshot(entries: [], activeIdentity: nil))
+    }
+    func save(_ snapshot: WindowRegistrySnapshot) {
+        savedSnapshots.append(snapshot)
+    }
+    func confirmMigration(_ snapshot: WindowRegistrySnapshot) {
+        save(snapshot)
+    }
 }

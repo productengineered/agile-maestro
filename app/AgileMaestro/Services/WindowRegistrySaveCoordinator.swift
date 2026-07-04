@@ -87,6 +87,23 @@ final class WindowRegistrySaveCoordinator {
         persist()
     }
 
+    /// Product ids currently open in any tracked window/tab (empty-tab
+    /// sentinels excluded) — the live "which products are already open"
+    /// registry `ProductWindowIdentity.transitionForSelectingProduct` needs
+    /// to route the empty-tab CTA's "select an already-open product" case to
+    /// `.focusExisting` instead of `.convertInPlace` (IS-TAB-FOCUS-800-2,
+    /// task AM-803-3).
+    ///
+    /// Derived from `entriesByIdentity`'s keys rather than a separate stored
+    /// set — this coordinator already tracks every open window's identity
+    /// for persistence, so no second source of truth is introduced.
+    func openProductIDs() -> Set<Product.ID> {
+        Set(entriesByIdentity.keys.compactMap { identity -> Product.ID? in
+            guard case .product(let productID) = identity else { return nil }
+            return productID
+        })
+    }
+
     private func persist() {
         let snapshot = WindowRegistrySnapshot(
             entries: order.compactMap { entriesByIdentity[$0] },

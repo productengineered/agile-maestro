@@ -36,12 +36,10 @@ enum ProductWindowIdentity: Hashable, Codable {
     /// empty tab's "Choose a Product" CTA (M-800-1), given the set of product
     /// ids already open in another tab/window.
     ///
-    /// `openProductIDs` has no real producer yet — AM-803-2 has no open-window
-    /// registry to populate it from. AM-803-3 (IS-TAB-FOCUS-800-2) owns
-    /// building that registry and wiring the `.focusExisting` branch; until
-    /// then, callers pass an empty set and every selection resolves to
-    /// `.convertInPlace` (today's best-effort behavior — matches this task's
-    /// scope, see task AM-803-2's completion comment).
+    /// `openProductIDs` is populated from `WindowRegistrySaveCoordinator
+    /// .shared.openProductIDs()` (IS-TAB-FOCUS-800-2, task AM-803-3) at the
+    /// real call site in `ProductWindowContentView.selectProduct`. Tests may
+    /// still pass an explicit set to exercise both branches directly.
     static func transitionForSelectingProduct(
         _ product: Product,
         openProductIDs: Set<Product.ID>
@@ -390,16 +388,24 @@ struct ProductWindowContentView: View {
     /// Handles selecting an existing product from the empty-tab CTA
     /// (SM-EMPTY-800-T3). Loads the product into this tab's `SessionViewModel`
     /// when it is not already open elsewhere; the resulting identity flip is
-    /// handled uniformly by the `onChange` above.
+    /// handled uniformly by the `onChange` above. When the product IS already
+    /// open elsewhere, defers to the focus-existing dedup path
+    /// (IS-TAB-FOCUS-800-2, task AM-803-3) instead — loading it into this
+    /// (still-empty) tab too would leave two live contexts for the same
+    /// product, since a direct `identity` mutation never goes through
+    /// `openWindow(value:)`'s native dedup.
     private func selectProduct(_ product: Product) {
-        switch ProductWindowIdentity.transitionForSelectingProduct(product, openProductIDs: []) {
+        let openProductIDs = WindowRegistrySaveCoordinator.shared.openProductIDs()
+        switch ProductWindowIdentity.transitionForSelectingProduct(product, openProductIDs: openProductIDs) {
         case .convertInPlace:
             windowContext.sessionViewModel.selectProduct(product)
         case .focusExisting:
-            // AM-803-3 (IS-TAB-FOCUS-800-2): focus the existing tab instead
-            // of loading the product here. Unreachable today — openProductIDs
-            // is always empty until AM-803-3 supplies a real registry.
-            break
+            // The product is already open in another tab/window — bring it
+            // to front via openWindow(value:)'s native value-equality dedup
+            // (research-window-tabbing.md Claim 1, `[VERIFIED]`) rather than
+            // loading it into this tab, which would create a second live
+            // WindowContext/SessionViewModel for the same product.
+            openWindow(value: ProductWindowIdentity.product(product.id))
         }
     }
 }

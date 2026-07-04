@@ -44,6 +44,34 @@ final class EmptyTabFlowTests: XCTestCase {
         XCTAssertNotEqual(sentinel, productIdentity)
     }
 
+    // MARK: - Product Identity Dedup Contract (task AM-803-3, IS-TAB-FOCUS-800-2)
+
+    /// The same product id must always produce an equal `ProductWindowIdentity`
+    /// — this is the exact value-equality `WindowGroup`'s native dedup
+    /// (research-window-tabbing.md Claim 1) keys off of. If this ever broke
+    /// (e.g. a future field added to `.product` that varies per call),
+    /// `openWindow(value:)` would stop focusing the existing tab and would
+    /// silently open a duplicate one instead.
+    func testSameProductIDProducesEqualIdentityAcrossSeparateConstructions() {
+        let productID = UUID()
+
+        let first = ProductWindowIdentity.product(productID)
+        let second = ProductWindowIdentity.product(productID)
+
+        XCTAssertEqual(first, second, "Same product id must dedup to the same identity")
+        XCTAssertEqual(first.hashValue, second.hashValue, "Equal identities must hash equally")
+    }
+
+    /// Two distinct product ids must never collide — the inverse guarantee
+    /// to the above, protecting against a regression where identity equality
+    /// stops discriminating between different products.
+    func testDifferentProductIDsProduceDistinctIdentities() {
+        let first = ProductWindowIdentity.product(UUID())
+        let second = ProductWindowIdentity.product(UUID())
+
+        XCTAssertNotEqual(first, second)
+    }
+
     // MARK: - CTA Opens Product List Without Forcing Selection (SM-EMPTY-800-T2, design3)
 
     /// `loadProductsForSelection()` must populate `products` for the CTA's
@@ -171,4 +199,58 @@ final class EmptyTabFlowTests: XCTestCase {
 
         XCTAssertEqual(outcome, .convertInPlace(.product(product.id)))
     }
+
+    // MARK: - Live Registry Wiring (task AM-803-3 — the registry now exists)
+
+    /// End-to-end proof that the real `WindowRegistrySaveCoordinator`
+    /// registry (not a hand-built set) correctly routes an already-open
+    /// product to `.focusExisting` — this is the exact call this task wires
+    /// into `ProductWindowContentView.selectProduct`, verified here without
+    /// needing to launch any actual window.
+    func testLiveRegistryRoutesAlreadyOpenProductToFocusExisting() {
+        let coordinator = WindowRegistrySaveCoordinator(registryService: MockWindowRegistryServiceForEmptyTabFlow())
+        let alreadyOpenProduct = Product(name: "Already Open Elsewhere")
+        coordinator.windowOpened(
+            identity: .product(alreadyOpenProduct.id),
+            viewMode: .treeDetail,
+            selectedSessionID: nil
+        )
+
+        let outcome = ProductWindowIdentity.transitionForSelectingProduct(
+            alreadyOpenProduct,
+            openProductIDs: coordinator.openProductIDs()
+        )
+
+        XCTAssertEqual(outcome, .focusExisting)
+    }
+
+    /// The same live registry must still convert in place for a product that
+    /// has never been opened — proving the wiring does not over-trigger
+    /// `.focusExisting` for every selection once any product is open.
+    func testLiveRegistryConvertsInPlaceForProductNotYetOpen() {
+        let coordinator = WindowRegistrySaveCoordinator(registryService: MockWindowRegistryServiceForEmptyTabFlow())
+        coordinator.windowOpened(identity: .product(UUID()), viewMode: .treeDetail, selectedSessionID: nil)
+        let notYetOpenProduct = Product(name: "Not Open Yet")
+
+        let outcome = ProductWindowIdentity.transitionForSelectingProduct(
+            notYetOpenProduct,
+            openProductIDs: coordinator.openProductIDs()
+        )
+
+        XCTAssertEqual(outcome, .convertInPlace(.product(notYetOpenProduct.id)))
+    }
+}
+
+// MARK: - MockWindowRegistryServiceForEmptyTabFlow
+
+/// Minimal no-op `WindowRegistryServiceProtocol` so
+/// `WindowRegistrySaveCoordinator` can be exercised here without touching
+/// `UserDefaults` — this file only cares about the coordinator's in-memory
+/// `openProductIDs()` tracking, not persistence.
+private final class MockWindowRegistryServiceForEmptyTabFlow: WindowRegistryServiceProtocol, @unchecked Sendable {
+    func loadLaunchPlan() -> WindowRegistryLaunchPlan {
+        .freshInstall(WindowRegistrySnapshot(entries: [], activeIdentity: nil))
+    }
+    func save(_ snapshot: WindowRegistrySnapshot) {}
+    func confirmMigration(_ snapshot: WindowRegistrySnapshot) {}
 }
