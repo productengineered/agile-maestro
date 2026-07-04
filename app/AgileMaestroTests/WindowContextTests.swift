@@ -140,34 +140,48 @@ final class WindowContextTests: XCTestCase {
     /// underlying resources were released: an object that no longer exists
     /// cannot fire further `onChange` callbacks, and no FSEvents stream or
     /// polling timer can be left running.
+    ///
+    /// Construction is scoped inside `makeContext()` rather than bound to
+    /// named `let`s in the test body. In an unoptimized (`-Onone`, i.e. Debug
+    /// test) build, ARC extends a named local's lifetime to the end of its
+    /// *lexical scope* — not its last use — purely so it stays inspectable in
+    /// the debugger. A `probeWatcher`/`sessionViewModel` `let` living directly
+    /// in this method would therefore keep `FileWatcherService` alive until
+    /// the closing brace regardless of whether `WindowContext`'s teardown
+    /// chain actually released it, making the final assertion pass
+    /// vacuously. Returning from `makeContext()` closes that inner scope
+    /// before the assertions run, so `weakWatcher` only stays alive through
+    /// `WindowContext`'s own strong-reference chain — exactly what this test
+    /// intends to prove.
     func testReleasingWindowContextStopsSessionFileWatcher() async throws {
         let tempDirectoryURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: tempDirectoryURL, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempDirectoryURL) }
 
-        var watcher: FileWatcherService? = FileWatcherService()
-        weak var weakWatcher = watcher
+        weak var weakWatcher: FileWatcherService?
 
-        guard let probeWatcher = watcher else {
-            XCTFail("Failed to construct probe FileWatcherService")
-            return
+        func makeContext() -> WindowContext {
+            let probeWatcher = FileWatcherService()
+            weakWatcher = probeWatcher
+
+            // Inject the probe watcher so `weakWatcher` observes the exact
+            // same instance `SessionViewModel` (and therefore
+            // `WindowContext`) ends up owning. `probeWatcher` and
+            // `sessionViewModel` are local to this helper, so they release
+            // when it returns instead of lingering for the rest of the test.
+            let sessionViewModel = SessionViewModel(
+                productService: MockProductService(),
+                sessionService: MockSessionService(),
+                parserService: MockParserService(),
+                backupService: MockBackupService(),
+                fileWatcher: probeWatcher
+            )
+
+            return WindowContext(sessionViewModel: sessionViewModel)
         }
 
-        // Inject the probe watcher so `weakWatcher` observes the exact same
-        // instance `SessionViewModel` (and therefore `WindowContext`) ends up
-        // owning. Immediately drop the local strong reference afterward so
-        // `sessionViewModel` is the only remaining strong owner.
-        let sessionViewModel = SessionViewModel(
-            productService: MockProductService(),
-            sessionService: MockSessionService(),
-            parserService: MockParserService(),
-            backupService: MockBackupService(),
-            fileWatcher: probeWatcher
-        )
-        watcher = nil
-
-        var context: WindowContext? = WindowContext(sessionViewModel: sessionViewModel)
+        var context: WindowContext? = makeContext()
 
         let session = TaskSession(id: UUID(), path: tempDirectoryURL, modifiedDate: Date())
         await context?.sessionViewModel.selectSession(session)
