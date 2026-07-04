@@ -27,6 +27,20 @@ struct KanbanCard: Identifiable {
     let taskItem: TaskItem
 }
 
+// MARK: - UAT Tier-2 Exposure
+
+extension KanbanCard {
+
+    /// The most recent Tier-2 agent UAT result for this card's underlying task, mirroring
+    /// how `reviewResult` is exposed above. Sourced from `taskItem.uatTier2` (computed, not
+    /// stored) so this stays in sync without a `KanbanViewModel.makeCard` change.
+    ///
+    /// `nil` for non-epic cards, or epics with no Tier-2 pass recorded yet.
+    var uatTier2: UATTier2Metadata? {
+        taskItem.uatTier2
+    }
+}
+
 // MARK: - KanbanColumnDef
 
 /// Definition of a column on the Kanban board.

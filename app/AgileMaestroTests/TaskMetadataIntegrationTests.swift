@@ -231,6 +231,120 @@ final class TaskMetadataIntegrationTests: XCTestCase {
             if expectTask { XCTAssertNotNil(item.metadata.task) }
         }
     }
+
+    // MARK: - UAT Tier-2 Decode (AM-801-4)
+
+    /// AC4/AC5: legacy epic JSON with no `uat` key must decode identically to before —
+    /// zero decode errors, `uat` and `uatTier2` both nil.
+    func testLegacyEpicWithoutUATKeyDecodesUnaffected() throws {
+        let item = try decodeTaskItem("""
+        {
+          "id": "158", "subject": "Epic: AM-700", "description": "Problem.",
+          "status": "pending", "blocks": [], "blockedBy": [],
+          "metadata": {
+            "schema_version": "2.0", "id": "AM-700", "type": "epic",
+            "approval": "approved", "blocked": false,
+            "review_stage": null, "review_result": null
+          }
+        }
+        """)
+        XCTAssertNil(item.metadata.uat, "legacy JSON with no uat key must decode uat as nil")
+        XCTAssertNil(item.uatTier2, "TaskItem.uatTier2 must be nil when uat is absent")
+        XCTAssertNotNil(item.metadata.epic, "unrelated epic decode must be unaffected")
+    }
+
+    func testUATTier2PassedResultDecodes() throws {
+        let item = try decodeTaskItem("""
+        {
+          "id": "42", "subject": "Epic: UAT", "description": "",
+          "status": "in_progress", "blocks": [], "blockedBy": [],
+          "metadata": {
+            "type": "epic", "review_stage": "agent-uat", "review_result": "awaiting",
+            "uat": {
+              "tier2": {
+                "result": "passed",
+                "xcresult": "planning/uat/DEMO-100/uat.xcresult",
+                "failed_tests": [],
+                "reason": null,
+                "recorded_at": "2026-07-02T18:40:00Z",
+                "recorded_by": "uat-agent"
+              }
+            }
+          }
+        }
+        """)
+        let tier2 = try XCTUnwrap(item.uatTier2)
+        XCTAssertEqual(tier2.result, .passed)
+        XCTAssertEqual(tier2.xcresult, "planning/uat/DEMO-100/uat.xcresult")
+        XCTAssertEqual(tier2.failedTests, [])
+        XCTAssertNil(tier2.reason)
+        XCTAssertNotNil(tier2.recordedAt)
+        XCTAssertEqual(tier2.recordedBy, "uat-agent")
+    }
+
+    func testUATTier2FailedResultDecodes() throws {
+        let item = try decodeTaskItem("""
+        {
+          "id": "43", "subject": "Epic: UAT", "description": "",
+          "status": "in_progress", "blocks": [], "blockedBy": [],
+          "metadata": {
+            "type": "epic",
+            "uat": { "tier2": { "result": "failed", "failed_tests": ["journey_login", "journey_sync"] } }
+          }
+        }
+        """)
+        let tier2 = try XCTUnwrap(item.uatTier2)
+        XCTAssertEqual(tier2.result, .failed)
+        XCTAssertEqual(tier2.failedTests, ["journey_login", "journey_sync"])
+    }
+
+    func testUATTier2SkippedResultDecodes() throws {
+        let item = try decodeTaskItem("""
+        {
+          "id": "44", "subject": "Epic: UAT", "description": "",
+          "status": "in_progress", "blocks": [], "blockedBy": [],
+          "metadata": {
+            "type": "epic",
+            "uat": { "tier2": { "result": "skipped", "reason": "No UITest target" } }
+          }
+        }
+        """)
+        let tier2 = try XCTUnwrap(item.uatTier2)
+        XCTAssertEqual(tier2.result, .skipped)
+        XCTAssertEqual(tier2.reason, "No UITest target")
+    }
+
+    /// An unrecognized/malformed `tier2.result` value must decode to `nil` without throwing —
+    /// the surrounding `tier2` object and its other fields must still decode normally.
+    func testUATTier2MalformedResultDecodesToNilWithoutThrowing() throws {
+        let item = try decodeTaskItem("""
+        {
+          "id": "45", "subject": "Epic: UAT", "description": "",
+          "status": "in_progress", "blocks": [], "blockedBy": [],
+          "metadata": {
+            "type": "epic",
+            "uat": { "tier2": { "result": "not-a-real-state", "recorded_by": "uat-agent" } }
+          }
+        }
+        """)
+        let tier2 = try XCTUnwrap(item.uatTier2, "malformed result must not prevent tier2 from decoding")
+        XCTAssertNil(tier2.result, "unrecognized result value must decode to nil, not throw")
+        XCTAssertEqual(tier2.recordedBy, "uat-agent", "sibling fields must still decode")
+    }
+
+    /// A completely malformed `uat` value (wrong JSON type) must not crash the whole decode.
+    func testMalformedUATObjectDecodesToNilWithoutThrowing() throws {
+        let item = try decodeTaskItem("""
+        {
+          "id": "46", "subject": "Epic: UAT", "description": "",
+          "status": "in_progress", "blocks": [], "blockedBy": [],
+          "metadata": { "type": "epic", "uat": "not-an-object" }
+        }
+        """)
+        XCTAssertNil(item.metadata.uat, "malformed uat value must decode to nil, not throw")
+        XCTAssertNil(item.uatTier2)
+        XCTAssertNotNil(item.metadata.epic, "unrelated epic decode must be unaffected")
+    }
 }
 
 // MARK: - Bug and TechDebt Pipeline Tests

@@ -199,6 +199,15 @@ extension TaskItem {
         metadata.reviewResult
     }
 
+    /// The most recent Tier-2 (XCUITest) agent UAT result, if any.
+    ///
+    /// Epic-only in practice: `metadata.uat` is written by the uat-agent during the
+    /// `agent-uat` review stage. `nil` for all other task types, and `nil` for epics that
+    /// haven't run a Tier-2 pass yet or whose `uat.tier2` object was malformed.
+    var uatTier2: UATTier2Metadata? {
+        metadata.uat?.tier2
+    }
+
     /// The assignee for this item.
     ///
     /// Story: prefers `assignee`, falls back to `claimedBy`.
