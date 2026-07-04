@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E8265C635C4A65A8D2FFE2C0 /* WindowRegistryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9292462DA9C2E576365F6653 /* WindowRegistryService.swift */; };
+		76D4FF489C5F7273CCD5F303 /* WindowRegistryServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65A2A3C7F672894229733A3A /* WindowRegistryServiceTests.swift */; };
 		102F83EBBF964C694E9C9571 /* TaskReference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01CA16A30F58D9BBCD16C7B /* TaskReference.swift */; };
 		173DA1B1B703E4D3F9CDDC1C /* ProductServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EBD2606EE155EEDBC7737D4 /* ProductServiceTests.swift */; };
 		1842A11A07C7D24CE57AB0B2 /* TaskParserServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FBDC3CEA6B49B8150DAAE3A /* TaskParserServiceProtocol.swift */; };
@@ -188,6 +190,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		9292462DA9C2E576365F6653 /* WindowRegistryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowRegistryService.swift; sourceTree = "<group>"; };
+		65A2A3C7F672894229733A3A /* WindowRegistryServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowRegistryServiceTests.swift; sourceTree = "<group>"; };
 		05DC19DDA40D48DF34DF5CD3 /* TaskItemDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskItemDecodingTests.swift; sourceTree = "<group>"; };
 		0FBDC3CEA6B49B8150DAAE3A /* TaskParserServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskParserServiceProtocol.swift; sourceTree = "<group>"; };
 		1177DF89E312D30D1F76D0AE /* SuggestedInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedInput.swift; sourceTree = "<group>"; };
@@ -533,6 +537,7 @@
 				39D40CA1C5B644768C191568 /* WindowContextTests.swift */,
 				7E33AFDD8D2F4C9DBF03ADDA /* EmptyTabFlowTests.swift */,
 				A753C7B26C9A423A9F129DC0 /* KanbanCardViewTests.swift */,
+				65A2A3C7F672894229733A3A /* WindowRegistryServiceTests.swift */,
 			);
 			path = AgileMaestroTests;
 			sourceTree = "<group>";
@@ -552,6 +557,7 @@
 				0FBDC3CEA6B49B8150DAAE3A /* TaskParserServiceProtocol.swift */,
 				8D14B751D1FD6A24E1E3D198 /* TaskSessionService.swift */,
 				7C9A0DB0BFB858BA29FF87A7 /* TaskSessionServiceProtocol.swift */,
+				9292462DA9C2E576365F6653 /* WindowRegistryService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -823,6 +829,7 @@
 				2F82D393FE41402A92FC474B /* WindowContextTests.swift in Sources */,
 				FA6DFEAE56C58D953A10C0FA /* EmptyTabFlowTests.swift in Sources */,
 				1F9FA151A15C465F903E58CF /* KanbanCardViewTests.swift in Sources */,
+				76D4FF489C5F7273CCD5F303 /* WindowRegistryServiceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -964,6 +971,7 @@
 				04E61DE0CDC34FFFB7F25744 /* EmptyNewTabView.swift in Sources */,
 				ECF8A76EE5805B2BAE1DBE1C /* ProductListMenuItems.swift in Sources */,
 				861B1043AF531931D803FB99 /* AccessibilityIdentifiers.swift in Sources */,
+				E8265C635C4A65A8D2FFE2C0 /* WindowRegistryService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
