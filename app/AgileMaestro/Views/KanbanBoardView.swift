@@ -9,8 +9,8 @@ import SwiftUI
 /// `@Environment(KanbanViewModel.self)`.
 ///
 /// Layout: filter bar (`.bar` material) at top, divider, then `ScrollView(.horizontal)`
-/// containing an `HStack` of `KanbanColumnView` instances. The security and human-UAT
-/// columns are only shown when at least one epic is present in the session.
+/// containing an `HStack` of `KanbanColumnView` instances. The security, agent-UAT, and
+/// human-UAT columns are only shown when at least one epic is present in the session.
 struct KanbanBoardView: View {
     @Environment(KanbanViewModel.self) private var kanbanViewModel
 
@@ -64,19 +64,13 @@ struct KanbanBoardView: View {
     }
 
     // MARK: - Visible Columns
-    // Security and Human UAT columns only appear when epic cards exist.
+    // Security, Agent UAT, and Human UAT columns only appear when epic cards exist.
     // Otherwise default 7 columns: backlog, approved, in_dev, code_review, qa,
-    // product_review, done.
+    // product_review, done. Gating logic lives in KanbanColumnDef.visibleColumns(hasEpicCards:)
+    // so it is unit-testable without instantiating this View.
     private var visibleColumns: [KanbanColumnDef] {
         let hasEpicCards = kanbanViewModel.allCards.contains { $0.type == .epic }
-        return KanbanColumnDef.allColumns.filter { column in
-            switch column.id {
-            case "security", "human_uat":
-                return hasEpicCards
-            default:
-                return true
-            }
-        }
+        return KanbanColumnDef.visibleColumns(hasEpicCards: hasEpicCards)
     }
 }
 

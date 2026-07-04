@@ -37,7 +37,8 @@ struct KanbanColumnDef: Identifiable {
 
     // MARK: - Static Column Definitions
 
-    /// All 9 Kanban columns in display order.
+    /// All 10 Kanban columns in display order.
+    /// R1.1: "agent_uat" inserted between "product_review" and "human_uat".
     static let allColumns: [KanbanColumnDef] = [
         KanbanColumnDef(id: "backlog", label: "Backlog", dotColor: "gray"),
         KanbanColumnDef(id: "approved", label: "Approved", dotColor: "blue"),
@@ -46,9 +47,28 @@ struct KanbanColumnDef: Identifiable {
         KanbanColumnDef(id: "qa", label: "QA", dotColor: "yellow"),
         KanbanColumnDef(id: "security", label: "Security", dotColor: "red"),
         KanbanColumnDef(id: "product_review", label: "Product Review", dotColor: "indigo"),
+        KanbanColumnDef(id: "agent_uat", label: "Agent UAT", dotColor: "teal"),
         KanbanColumnDef(id: "human_uat", label: "Human UAT", dotColor: "pink"),
         KanbanColumnDef(id: "done", label: "Done", dotColor: "green")
     ]
+
+    // MARK: - Visibility
+
+    /// Filters `allColumns` down to the columns visible for the current data set.
+    ///
+    /// Security, Agent UAT, and Human UAT columns are epic-gated: they only appear
+    /// once at least one epic card exists in the session. All other columns are
+    /// always visible.
+    static func visibleColumns(hasEpicCards: Bool) -> [KanbanColumnDef] {
+        allColumns.filter { column in
+            switch column.id {
+            case "security", "agent_uat", "human_uat":
+                return hasEpicCards
+            default:
+                return true
+            }
+        }
+    }
 }
 
 // MARK: - KanbanTypeFilter

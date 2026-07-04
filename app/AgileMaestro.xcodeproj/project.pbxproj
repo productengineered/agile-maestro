@@ -13,6 +13,7 @@
 		1AE61AE9D0BF0C8D9E98D747 /* BackupServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B12AC349FEFF7AE3D343823 /* BackupServiceTests.swift */; };
 		1E7979C9C2FCA4F94EC6AF92 /* AgileMaestroApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 494E857FC8EEEEC840E5596B /* AgileMaestroApp.swift */; };
 		2BCF8E84ACFFD8C121B84537 /* FileWatcherServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD214BFD3C9355DACFF0FE35 /* FileWatcherServiceTests.swift */; };
+		2F82D393FE41402A92FC474B /* WindowContextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39D40CA1C5B644768C191568 /* WindowContextTests.swift */; };
 		34C47DD51155653B242998A9 /* ClaudeDirectoryResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = C09CAEC3EF54D1B5332A4AE7 /* ClaudeDirectoryResolver.swift */; };
 		3EE2ED42D1A0E3AC7AE01F52 /* GitInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AEC9BDE5D3A60748066D929 /* GitInfo.swift */; };
 		3F21D824C8DAEED3B9C63421 /* StoryMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = A507E60B249D279ECC056FE0 /* StoryMetadata.swift */; };
@@ -44,6 +45,7 @@
 		9DA1E004621F7671FB30B9BA /* ProductServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77FF717A9BC49CE3FA33F1E9 /* ProductServiceProtocol.swift */; };
 		9EDB0BC281159CF1481AC479 /* AgileMaestroTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3045E2749CFB81FC2EB13430 /* AgileMaestroTests.swift */; };
 		A545536E42E5A4CAF1A8E0AD /* References.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A58A0D3E698D727829F947 /* References.swift */; };
+		AB4D882E496645DD8A8E4A4D /* WindowContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4099728080B4F128FBA2022 /* WindowContext.swift */; };
 		AE0DF41347D03AA54C68D143 /* Logger+Categories.swift in Sources */ = {isa = PBXBuildFile; fileRef = 929803BE114D004BBADD1439 /* Logger+Categories.swift */; };
 		B4DD6238AC84406441427F28 /* TimelineDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC545DB0685287EFC80B28EF /* TimelineDay.swift */; };
 		B595BE50B6D2ED0437AA927A /* ManifestService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F062AC158E0CAA41DEAF375 /* ManifestService.swift */; };
@@ -153,6 +155,7 @@
 		F66BD5612F84882800A30480 /* ClaudeTaskDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F66BD5602F84882800A30480 /* ClaudeTaskDetailView.swift */; };
 		F66BD5632F8488CC00A30480 /* OrphanedTaskDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F66BD5622F8488CC00A30480 /* OrphanedTaskDetailView.swift */; };
 		F6A0EAB42F68CE2E0048D487 /* KanbanViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6A0EAB32F68CE2E0048D487 /* KanbanViewModelTests.swift */; };
+		477C44CA944DBE128F20DDA4 /* KanbanColumnDefTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 382A77846DD178C4290B3751 /* KanbanColumnDefTests.swift */; };
 		F6A0EAB62F68CF790048D487 /* KanbanCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6A0EAB52F68CF790048D487 /* KanbanCardView.swift */; };
 		F6A0EAB82F68CF850048D487 /* KanbanColumnView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6A0EAB72F68CF850048D487 /* KanbanColumnView.swift */; };
 		F6A0EABA2F68D19A0048D487 /* KanbanFilterBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6A0EAB92F68D19A0048D487 /* KanbanFilterBarView.swift */; };
@@ -186,6 +189,7 @@
 		1F42158D0CF0F09C8E18DA6A /* ResilientDecoding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResilientDecoding.swift; sourceTree = "<group>"; };
 		3045E2749CFB81FC2EB13430 /* AgileMaestroTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgileMaestroTests.swift; sourceTree = "<group>"; };
 		35ABC18F5B104272E885955D /* TaskMetadataContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskMetadataContainer.swift; sourceTree = "<group>"; };
+		39D40CA1C5B644768C191568 /* WindowContextTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowContextTests.swift; sourceTree = "<group>"; };
 		44D375A0D1EF0033BD966420 /* TaskSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSession.swift; sourceTree = "<group>"; };
 		47B8F98B7BF5039D1C818356 /* AcceptanceCriteriaItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcceptanceCriteriaItem.swift; sourceTree = "<group>"; };
 		494E857FC8EEEEC840E5596B /* AgileMaestroApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgileMaestroApp.swift; sourceTree = "<group>"; };
@@ -215,6 +219,7 @@
 		929803BE114D004BBADD1439 /* Logger+Categories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Logger+Categories.swift"; sourceTree = "<group>"; };
 		984FC5A8319FC5945BF2D893 /* Dependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Dependencies.swift; sourceTree = "<group>"; };
 		A0D53A6FAE1A7B4E97B67077 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
+		A4099728080B4F128FBA2022 /* WindowContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowContext.swift; sourceTree = "<group>"; };
 		A507E60B249D279ECC056FE0 /* StoryMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryMetadata.swift; sourceTree = "<group>"; };
 		A5C33376CB1BC1C503F58725 /* AgileMaestroUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AgileMaestroUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A879CF6B4B11DAF78BB9B9E3 /* TaskSpecificMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSpecificMetadata.swift; sourceTree = "<group>"; };
@@ -324,6 +329,7 @@
 		F66BD5602F84882800A30480 /* ClaudeTaskDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeTaskDetailView.swift; sourceTree = "<group>"; };
 		F66BD5622F8488CC00A30480 /* OrphanedTaskDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrphanedTaskDetailView.swift; sourceTree = "<group>"; };
 		F6A0EAB32F68CE2E0048D487 /* KanbanViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KanbanViewModelTests.swift; sourceTree = "<group>"; };
+		382A77846DD178C4290B3751 /* KanbanColumnDefTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KanbanColumnDefTests.swift; sourceTree = "<group>"; };
 		F6A0EAB52F68CF790048D487 /* KanbanCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KanbanCardView.swift; sourceTree = "<group>"; };
 		F6A0EAB72F68CF850048D487 /* KanbanColumnView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KanbanColumnView.swift; sourceTree = "<group>"; };
 		F6A0EAB92F68D19A0048D487 /* KanbanFilterBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KanbanFilterBarView.swift; sourceTree = "<group>"; };
@@ -504,6 +510,8 @@
 				F66BD5542F801CCE00A30480 /* ProductSheetViewModelTests.swift */,
 				F66BD5562F80203600A30480 /* SessionViewModelProductLifecycleTests.swift */,
 				F66BD55E2F8485F300A30480 /* ClaudeTaskTopologicalSortTests.swift */,
+				382A77846DD178C4290B3751 /* KanbanColumnDefTests.swift */,
+				39D40CA1C5B644768C191568 /* WindowContextTests.swift */,
 			);
 			path = AgileMaestroTests;
 			sourceTree = "<group>";
@@ -535,6 +543,7 @@
 				DCD60AD02F5E628D001961EE /* KanbanViewModel.swift */,
 				DCD60AD22F5E6293001961EE /* DetailViewModel.swift */,
 				DCD60AD42F5E6297001961EE /* TeamViewModel.swift */,
+				A4099728080B4F128FBA2022 /* WindowContext.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -764,6 +773,7 @@
 				F66BD5482F8012FC00A30480 /* SessionViewModelCRUDTests.swift in Sources */,
 				1AE61AE9D0BF0C8D9E98D747 /* BackupServiceTests.swift in Sources */,
 				F6A0EAB42F68CE2E0048D487 /* KanbanViewModelTests.swift in Sources */,
+				477C44CA944DBE128F20DDA4 /* KanbanColumnDefTests.swift in Sources */,
 				2BCF8E84ACFFD8C121B84537 /* FileWatcherServiceTests.swift in Sources */,
 				F66BD53A2F78547700A30480 /* TeamViewModelBehaviorTests.swift in Sources */,
 				550E5B328DB46AC70A161E50 /* MarkdownSectionParserTests.swift in Sources */,
@@ -786,6 +796,7 @@
 				F66BD5242F7846AE00A30480 /* MockManifestService.swift in Sources */,
 				F66BD5442F7B106300A30480 /* TaskMetadataIntegrationTests.swift in Sources */,
 				DCD60AE12F5E7000001961EE /* DetailViewModelTests.swift in Sources */,
+				2F82D393FE41402A92FC474B /* WindowContextTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -920,6 +931,7 @@
 				DCD60AD12F5E628D001961EE /* KanbanViewModel.swift in Sources */,
 				DCD60B012F5F8C9C001961EE /* PriorityBadgeView.swift in Sources */,
 				DCD60B092F5F8D60001961EE /* ProgressBarView.swift in Sources */,
+				AB4D882E496645DD8A8E4A4D /* WindowContext.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
