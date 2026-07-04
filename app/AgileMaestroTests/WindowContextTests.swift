@@ -93,6 +93,97 @@ final class WindowContextTests: XCTestCase {
         XCTAssertEqual(second.selectedViewMode, .team)
     }
 
+    // MARK: - Teardown (task-12 / IS-800-6)
+
+    /// Releasing a `WindowContext` must deallocate all five owned ViewModels —
+    /// proving no retain cycle exists between `WindowContext` and any of them
+    /// (audited manually: none of the five hold a reference back to
+    /// `WindowContext` or to a sibling ViewModel; wiring happens at the view
+    /// layer only, per the "Ownership contract" doc comment on
+    /// `WindowContext`). This is a regression guard against a future cycle
+    /// being introduced accidentally.
+    func testReleasingWindowContextDeallocatesAllFiveOwnedViewModels() {
+        var context: WindowContext? = WindowContext()
+        weak var weakSession = context?.sessionViewModel
+        weak var weakTree = context?.treeViewModel
+        weak var weakKanban = context?.kanbanViewModel
+        weak var weakDetail = context?.detailViewModel
+        weak var weakTeam = context?.teamViewModel
+
+        XCTAssertNotNil(weakSession)
+        XCTAssertNotNil(weakTree)
+        XCTAssertNotNil(weakKanban)
+        XCTAssertNotNil(weakDetail)
+        XCTAssertNotNil(weakTeam)
+
+        context = nil
+
+        XCTAssertNil(weakSession, "SessionViewModel leaked — retain cycle with WindowContext?")
+        XCTAssertNil(weakTree, "TreeViewModel leaked — retain cycle with WindowContext?")
+        XCTAssertNil(weakKanban, "KanbanViewModel leaked — retain cycle with WindowContext?")
+        XCTAssertNil(weakDetail, "DetailViewModel leaked — retain cycle with WindowContext?")
+        XCTAssertNil(weakTeam, "TeamViewModel leaked — retain cycle with WindowContext?")
+    }
+
+    /// Releasing a `WindowContext` deallocates its owned `SessionViewModel`,
+    /// which in turn deallocates its `FileWatcherService` — proving the
+    /// teardown contract documented on `WindowContext`: it has no explicit
+    /// teardown logic of its own and relies entirely on the existing
+    /// deinit-based cleanup chain (`FileWatcherService.deinit` at
+    /// `FileWatcherService.swift` ~line 140 calls `stopInternal()`, which
+    /// stops the FSEventStream and cancels the polling timer/debounce work
+    /// item — see ~line 291).
+    ///
+    /// Deallocation is synchronous, deterministic ARC (no autorelease pool
+    /// involved here), so asserting the weak reference is `nil` immediately
+    /// after releasing the `WindowContext` is definitive proof the watcher's
+    /// underlying resources were released: an object that no longer exists
+    /// cannot fire further `onChange` callbacks, and no FSEvents stream or
+    /// polling timer can be left running.
+    func testReleasingWindowContextStopsSessionFileWatcher() async throws {
+        let tempDirectoryURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: tempDirectoryURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDirectoryURL) }
+
+        var watcher: FileWatcherService? = FileWatcherService()
+        weak var weakWatcher = watcher
+
+        guard let probeWatcher = watcher else {
+            XCTFail("Failed to construct probe FileWatcherService")
+            return
+        }
+
+        // Inject the probe watcher so `weakWatcher` observes the exact same
+        // instance `SessionViewModel` (and therefore `WindowContext`) ends up
+        // owning. Immediately drop the local strong reference afterward so
+        // `sessionViewModel` is the only remaining strong owner.
+        let sessionViewModel = SessionViewModel(
+            productService: MockProductService(),
+            sessionService: MockSessionService(),
+            parserService: MockParserService(),
+            backupService: MockBackupService(),
+            fileWatcher: probeWatcher
+        )
+        watcher = nil
+
+        var context: WindowContext? = WindowContext(sessionViewModel: sessionViewModel)
+
+        let session = TaskSession(id: UUID(), path: tempDirectoryURL, modifiedDate: Date())
+        await context?.sessionViewModel.selectSession(session)
+
+        XCTAssertNotNil(weakWatcher, "Watcher should still be alive while its WindowContext is retained")
+
+        context = nil
+
+        XCTAssertNil(
+            weakWatcher,
+            "Releasing WindowContext must deallocate the file watcher (via SessionViewModel) — " +
+            "proving FileWatcherService.deinit's stopInternal() ran, leaving no leaked FSEvents " +
+            "stream or polling timer and no possibility of further onChange callbacks"
+        )
+    }
+
     // MARK: - Dependency Injection
 
     /// `WindowContext`'s init parameters are defaulted but overridable, so a
