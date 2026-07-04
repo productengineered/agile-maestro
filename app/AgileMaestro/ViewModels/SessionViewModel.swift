@@ -2,32 +2,6 @@ import Foundation
 import Observation
 import OSLog
 
-// MARK: - LoadingState
-
-/// Represents the loading lifecycle of an async operation in the app shell.
-///
-/// Shared by `SessionViewModel` and future ViewModels that require
-/// a loading/loaded/error state machine.
-enum LoadingState: Equatable {
-    case idle
-    case loading
-    case loaded
-    case error(AgileMaestroError)
-
-    // MARK: - Equatable
-
-    static func == (lhs: LoadingState, rhs: LoadingState) -> Bool {
-        switch (lhs, rhs) {
-        case (.idle, .idle), (.loading, .loading), (.loaded, .loaded):
-            return true
-        case (.error(let lhsErr), .error(let rhsErr)):
-            return lhsErr.localizedDescription == rhsErr.localizedDescription
-        default:
-            return false
-        }
-    }
-}
-
 // MARK: - SessionViewModel
 
 /// Drives product and session selection for the app shell toolbar.
@@ -241,6 +215,25 @@ final class SessionViewModel {
         } catch {
             logger.error("Failed to load products: \(error.localizedDescription)")
             state = .error(.productSaveFailed(underlying: error))
+        }
+    }
+
+    /// Loads the registered products list for display purposes only — e.g. the
+    /// empty-tab "Choose a Product" CTA (AM-803-2, M-800-1) — without
+    /// auto-selecting a product or loading sessions.
+    ///
+    /// Unlike `loadProducts()`, this has no effect on `selectedProduct`,
+    /// `selectedSession`, or `state`: safe to call from a tab that must stay
+    /// on SCR-EMPTY until the user explicitly picks a product (SM-EMPTY-800-T1,
+    /// design3 "no forced modal" — auto-selecting here would silently convert
+    /// a fresh tab away from the empty state before the user acts).
+    func loadProductsForSelection() async {
+        do {
+            let loaded = try await productService.loadProducts()
+            products = loaded
+            checkProductStaleness()
+        } catch {
+            logger.error("Failed to load products for selection: \(error.localizedDescription)")
         }
     }
 

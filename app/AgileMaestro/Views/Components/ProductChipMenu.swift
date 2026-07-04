@@ -13,6 +13,7 @@ import SwiftUI
 struct ProductChipMenu: View {
 
     @Environment(SessionViewModel.self) private var viewModel
+    @Environment(\.openWindow) private var openWindow
 
     @Binding var showingNewProductSheet: Bool
     @Binding var showingEditProductSheet: Bool
@@ -38,31 +39,32 @@ struct ProductChipMenu: View {
 
     @ViewBuilder
     private var productListSection: some View {
-        ForEach(viewModel.products) { product in
-            Button {
-                viewModel.selectProduct(product)
-            } label: {
-                let isSelected = viewModel.selectedProduct?.id == product.id
-                let isStale = viewModel.staleProductIDs.contains(product.id)
-                HStack {
-                    if isSelected {
-                        Label(product.name, systemImage: "checkmark")
-                    } else {
-                        Text(product.name)
-                    }
-                    if isStale {
-                        Spacer()
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .symbolRenderingMode(.multicolor)
-                            .font(.system(size: 12))
-                            .accessibilityLabel("Directory not found")
-                    }
-                }
-            }
-            .help(viewModel.staleProductIDs.contains(product.id) ? "Session directory not found" : "")
-        }
+        ProductListMenuItems(
+            products: viewModel.products,
+            selectedProductID: viewModel.selectedProduct?.id,
+            staleProductIDs: viewModel.staleProductIDs,
+            onSelect: viewModel.selectProduct,
+            identifier: { AXID.ProductChipMenu.productRow($0.id.uuidString) }
+        )
 
         if !viewModel.products.isEmpty {
+            // IS-TAB-OPEN-800-1: open a product in a new tab instead of
+            // switching the current one. Native openWindow(value:) dedup
+            // (research-window-tabbing.md Claim 1) means choosing a product
+            // already open elsewhere focuses that tab rather than creating a
+            // duplicate — no extra dedup logic needed here.
+            Menu("Open in New Tab") {
+                ForEach(viewModel.products) { product in
+                    Button {
+                        openWindow(value: ProductWindowIdentity.product(product.id))
+                    } label: {
+                        Text(product.name)
+                    }
+                    .accessibilityIdentifier(AXID.ProductChipMenu.openInNewTabRow(product.id.uuidString))
+                }
+            }
+            .accessibilityIdentifier(AXID.ProductChipMenu.openInNewTabMenu)
+
             Divider()
         }
     }

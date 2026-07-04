@@ -31,6 +31,37 @@ enum ProductWindowIdentity: Hashable, Codable {
     static func newEmptySentinel() -> ProductWindowIdentity {
         .empty(UUID())
     }
+
+    /// Decides the SM-EMPTY-800-T3 transition for selecting `product` from an
+    /// empty tab's "Choose a Product" CTA (M-800-1), given the set of product
+    /// ids already open in another tab/window.
+    ///
+    /// `openProductIDs` has no real producer yet — AM-803-2 has no open-window
+    /// registry to populate it from. AM-803-3 (IS-TAB-FOCUS-800-2) owns
+    /// building that registry and wiring the `.focusExisting` branch; until
+    /// then, callers pass an empty set and every selection resolves to
+    /// `.convertInPlace` (today's best-effort behavior — matches this task's
+    /// scope, see task AM-803-2's completion comment).
+    static func transitionForSelectingProduct(
+        _ product: Product,
+        openProductIDs: Set<Product.ID>
+    ) -> EmptyTabSelectionOutcome {
+        if openProductIDs.contains(product.id) {
+            return .focusExisting
+        }
+        return .convertInPlace(.product(product.id))
+    }
+}
+
+// MARK: - EmptyTabSelectionOutcome
+
+/// Outcome of selecting a product from the empty-tab CTA (M-800-1): either
+/// convert this tab's identity in place (Path A, SM-EMPTY-800-T3 "not already
+/// open" branch), or defer to the focus-existing dedup path (SM-TAB-800-T8 /
+/// IS-TAB-FOCUS-800-2 — implemented in AM-803-3).
+enum EmptyTabSelectionOutcome: Equatable {
+    case convertInPlace(ProductWindowIdentity)
+    case focusExisting
 }
 
 // MARK: - AgileMaestroApp
@@ -173,24 +204,34 @@ struct AgileMaestroApp: App {
 /// continue to read them with `@Environment(Type.self)`, exactly as before.
 ///
 /// Branches on `identity`: a `.product` identity shows the existing app shell
-/// (`MainWindowView`); an `.empty` sentinel identity shows a minimal SCR-EMPTY
-/// placeholder. Wiring the specific product id into `WindowContext`'s
-/// `SessionViewModel` selection (so a window opened for product X actually shows
-/// product X's data, plus the full empty-tab product-picker CTA) is deferred to
-/// AM-803-2 ("Add open-in-new-tab flow + empty new-tab CTA") — this task's scope
-/// is the scene/tabbing plumbing only.
+/// (`MainWindowView`); an `.empty` sentinel identity shows the full SCR-EMPTY
+/// experience (`EmptyNewTabView`, AM-803-2) — a "Choose a Product" CTA plus a
+/// "New Product..." entry point into the existing `NewProductSheet`.
+///
+/// Selecting a product (existing or newly created) converts this window/tab
+/// in place: mutating `identity` to `.product(id)` re-keys the `WindowGroup`
+/// scene's dedup identity without opening a new window (Path A, confirmed by
+/// the AM-803-1 spike — see that task's completion comment for the empirical
+/// evidence). The "already open elsewhere" dedup branch is deferred to
+/// AM-803-3 (`EmptyTabSelectionOutcome.focusExisting`).
 struct ProductWindowContentView: View {
 
-    /// The identity this window/tab was opened with. A binding so a future task
-    /// can transition an empty tab into a product tab in place (see the "Open
-    /// Design Question" in `planning/design/window-tabs-spec.md` and the A3 spike
-    /// evidence in task AM-803-1's completion comment for which mechanism to use).
+    /// The identity this window/tab was opened with. A binding so selecting a
+    /// product from the empty-tab CTA can transition this tab into a product
+    /// tab in place (Path A — see the "Open Design Question" in
+    /// `planning/design/window-tabs-spec.md` and the A3 spike evidence in task
+    /// AM-803-1's completion comment for which mechanism to use).
     @Binding var identity: ProductWindowIdentity
 
     /// This window's independent ViewModel graph. A new instance is created
     /// automatically whenever SwiftUI instantiates a new window for the
     /// `WindowGroup`.
     @State private var windowContext = WindowContext()
+
+    /// Controls the "New Product..." sheet reached from the empty-tab CTA
+    /// (M-800-1 -> M-800-2). Local to this window/tab, mirroring
+    /// `SessionViewModel.showingNewProductSheet`'s role for `MainWindowView`.
+    @State private var showingNewProductSheet = false
 
     var body: some View {
         content
@@ -208,7 +249,44 @@ struct ProductWindowContentView: View {
         case .product:
             MainWindowView()
         case .empty:
-            EmptyProductTabPlaceholderView()
+            EmptyNewTabView(
+                products: windowContext.sessionViewModel.products,
+                staleProductIDs: windowContext.sessionViewModel.staleProductIDs,
+                onSelectProduct: selectProduct,
+                onNewProduct: { showingNewProductSheet = true }
+            )
+            .task {
+                // Populates the CTA's product list only — no auto-selection,
+                // so this tab stays on SCR-EMPTY until the user acts.
+                await windowContext.sessionViewModel.loadProductsForSelection()
+            }
+            .onChange(of: windowContext.sessionViewModel.selectedProduct?.id) { _, newProductID in
+                // Fires for both paths that can populate selectedProduct while
+                // this tab is still empty: selectProduct(_:) below, and
+                // NewProductSheet's create-success path (M-800-2, unchanged) —
+                // a single place converts this tab once either succeeds.
+                guard let newProductID else { return }
+                identity = .product(newProductID)
+            }
+            .sheet(isPresented: $showingNewProductSheet) {
+                NewProductSheet(sessionViewModel: windowContext.sessionViewModel)
+            }
+        }
+    }
+
+    /// Handles selecting an existing product from the empty-tab CTA
+    /// (SM-EMPTY-800-T3). Loads the product into this tab's `SessionViewModel`
+    /// when it is not already open elsewhere; the resulting identity flip is
+    /// handled uniformly by the `onChange` above.
+    private func selectProduct(_ product: Product) {
+        switch ProductWindowIdentity.transitionForSelectingProduct(product, openProductIDs: []) {
+        case .convertInPlace:
+            windowContext.sessionViewModel.selectProduct(product)
+        case .focusExisting:
+            // AM-803-3 (IS-TAB-FOCUS-800-2): focus the existing tab instead
+            // of loading the product here. Unreachable today — openProductIDs
+            // is always empty until AM-803-3 supplies a real registry.
+            break
         }
     }
 }
