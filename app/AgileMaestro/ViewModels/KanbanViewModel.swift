@@ -223,6 +223,7 @@ final class KanbanViewModel {
         case "qa":              return "qa"
         case "security":        return "security"
         case "product-review":  return "product_review"
+        case "agent-uat":       return "agent_uat"
         case "human-uat":       return "human_uat"
         default:                return nil
         }
@@ -362,20 +363,18 @@ final class KanbanViewModel {
         return lhs.title < rhs.title
     }
 
+    /// Left-to-right column order, used to compute `columnSortOrder`.
+    ///
+    /// A lookup table (rather than a switch) keeps this maintainable as columns
+    /// are added without tripping cyclomatic-complexity lint thresholds.
+    private static let columnOrder: [String] = [
+        "backlog", "approved", "in_dev", "code_review", "qa", "security",
+        "product_review", "agent_uat", "human_uat", "done"
+    ]
+
     /// Numeric sort order for column IDs (used to group allCards by column position).
     private func columnSortOrder(_ columnId: String) -> Int {
-        switch columnId {
-        case "backlog":         return 0
-        case "approved":        return 1
-        case "in_dev":          return 2
-        case "code_review":     return 3
-        case "qa":              return 4
-        case "security":        return 5
-        case "product_review":  return 6
-        case "human_uat":       return 7
-        case "done":            return 8
-        default:                return 9
-        }
+        Self.columnOrder.firstIndex(of: columnId) ?? Self.columnOrder.count
     }
 
     // MARK: - Private: Helpers

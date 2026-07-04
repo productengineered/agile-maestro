@@ -190,6 +190,9 @@ extension KanbanViewModelTests {
             ColumnAssignmentCase(type: "story", status: "pending",
                                  approval: "approved", reviewStage: "product-review",
                                  reviewResult: "awaiting", expectedColumn: "product_review"),
+            ColumnAssignmentCase(type: "epic", status: "pending",
+                                 approval: "approved", reviewStage: "agent-uat",
+                                 reviewResult: "awaiting", expectedColumn: "agent_uat"),
             ColumnAssignmentCase(type: "story", status: "pending",
                                  approval: "approved", reviewStage: "human-uat",
                                  reviewResult: "awaiting", expectedColumn: "human_uat")
@@ -419,6 +422,60 @@ extension KanbanViewModelTests {
         XCTAssertEqual(doneCards.first?.id, "epic-dated",
             "Card with completedAt should sort above card with nil completedAt")
         XCTAssertEqual(doneCards.last?.id, "story-nodated")
+    }
+
+    /// R1.3 / SM-KANBAN-800-T5: agent_uat's column position must fall strictly
+    /// between product_review and human_uat in the globally sorted card list.
+    func testColumnSortOrderPlacesAgentUatBetweenProductReviewAndHumanUat() throws {
+        let productReviewEpic = try makeItem(
+            id: "epic-product-review", type: "epic",
+            reviewStage: "product-review", reviewResult: "awaiting"
+        )
+        let agentUatEpic = try makeItem(
+            id: "epic-agent-uat", type: "epic",
+            reviewStage: "agent-uat", reviewResult: "awaiting"
+        )
+        let humanUatEpic = try makeItem(
+            id: "epic-human-uat", type: "epic",
+            reviewStage: "human-uat", reviewResult: "awaiting"
+        )
+        // Shuffle the input order to prove the ViewModel — not incidental insertion
+        // order — is responsible for the resulting sort.
+        sut.setTasks([humanUatEpic, agentUatEpic, productReviewEpic])
+
+        let orderedColumns = sut.allCards.map { $0.column }
+        let productReviewIndex = try XCTUnwrap(orderedColumns.firstIndex(of: "product_review"))
+        let agentUatIndex = try XCTUnwrap(orderedColumns.firstIndex(of: "agent_uat"))
+        let humanUatIndex = try XCTUnwrap(orderedColumns.firstIndex(of: "human_uat"))
+
+        XCTAssertLessThan(productReviewIndex, agentUatIndex,
+            "agent_uat must sort after product_review")
+        XCTAssertLessThan(agentUatIndex, humanUatIndex,
+            "agent_uat must sort before human_uat")
+    }
+
+    /// Per agent-uat-stage-reference.md, the agent-uat stage never transitions
+    /// review_result to "rejected" — a fix-loop round stays at review_result
+    /// "awaiting" and must remain in the agent_uat column, not bounce through a
+    /// rejected-style column change.
+    func testAgentUatFixLoopRoundStaysInAgentUatColumn() throws {
+        let firstPass = try makeItem(
+            id: "epic-fix-loop", type: "epic",
+            reviewStage: "agent-uat", reviewResult: "awaiting"
+        )
+        sut.setTasks([firstPass])
+        let firstCard = try XCTUnwrap(sut.allCards.first { $0.id == "epic-fix-loop" })
+        XCTAssertEqual(firstCard.column, "agent_uat")
+
+        // Simulate a subsequent fix-loop round: same task, still agent-uat/awaiting.
+        let fixLoopRound = try makeItem(
+            id: "epic-fix-loop", type: "epic",
+            reviewStage: "agent-uat", reviewResult: "awaiting"
+        )
+        sut.setTasks([fixLoopRound])
+        let fixLoopCard = try XCTUnwrap(sut.allCards.first { $0.id == "epic-fix-loop" })
+        XCTAssertEqual(fixLoopCard.column, "agent_uat",
+            "Fix-loop round must stay in agent_uat; agent-uat never uses review_result 'rejected'")
     }
 }
 
