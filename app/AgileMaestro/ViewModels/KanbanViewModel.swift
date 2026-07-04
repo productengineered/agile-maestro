@@ -194,13 +194,16 @@ final class KanbanViewModel {
     /// Assigns a column ID based on the task's workflow state.
     ///
     /// Review-stage items override the base assignment only when the task is
-    /// `.pending` and awaiting review.
+    /// `.pending` and awaiting review. An `.inProgress` task always routes to
+    /// "in_dev" even if it still carries a stale `review_stage`/`review_result`
+    /// pair from a prior cycle (FR-4.2 regression) — the task's `status` is the
+    /// higher-precedence signal once active development has resumed.
     private func assignColumn(for task: TaskItem) -> String {
         if task.status == .completed {
             return "done"
         }
 
-        if let reviewColumn = reviewStageColumn(for: task) {
+        if task.status == .pending, let reviewColumn = reviewStageColumn(for: task) {
             return reviewColumn
         }
 

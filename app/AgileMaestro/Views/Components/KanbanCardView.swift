@@ -157,7 +157,7 @@ struct KanbanCardView: View {
     static func uatBadgeText(result: UATTier2Result, failedCount: Int) -> String {
         switch result {
         case .passed: return "UAT ✓"
-        case .failed: return "UAT ✕ \(failedCount)"
+        case .failed: return failedCount > 0 ? "UAT ✕ \(failedCount)" : "UAT ✕"
         case .skipped: return "UAT"
         }
     }
@@ -217,7 +217,11 @@ struct KanbanCardView: View {
                 label += ", Agent UAT passed"
             case .failed:
                 let count = uat.failedTests?.count ?? 0
-                label += ", Agent UAT failed, \(count) test\(count == 1 ? "" : "s")"
+                if count > 0 {
+                    label += ", Agent UAT failed, \(count) test\(count == 1 ? "" : "s")"
+                } else {
+                    label += ", Agent UAT failed"
+                }
             case .skipped:
                 label += ", Agent UAT skipped\(uat.reason.map { ", \($0)" } ?? "")"
             }

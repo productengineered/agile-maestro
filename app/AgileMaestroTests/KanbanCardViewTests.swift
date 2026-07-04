@@ -13,6 +13,15 @@ import XCTest
 // accessibility label are exposed as non-`private` (directly testable) members so
 // their content can be verified without rendering an actual view hierarchy.
 
+// MARK: - Badge Text Test Case
+
+/// Replaces a 3-member tuple (SwiftLint `large_tuple`) for `testUATBadgeText_AllStates`.
+private struct BadgeTextCase {
+    let result: UATTier2Result
+    let failedCount: Int
+    let expected: String
+}
+
 final class KanbanCardViewTests: XCTestCase {
 
     // MARK: - Helpers
@@ -114,16 +123,16 @@ final class KanbanCardViewTests: XCTestCase {
     // MARK: - Badge Text (KanbanCardView.uatBadgeText)
 
     func testUATBadgeText_AllStates() {
-        let cases: [(UATTier2Result, Int, String)] = [
-            (.passed, 0, "UAT ✓"),
-            (.failed, 3, "UAT ✕ 3"),
-            (.failed, 0, "UAT ✕ 0"),
-            (.skipped, 0, "UAT")
+        let cases: [BadgeTextCase] = [
+            BadgeTextCase(result: .passed, failedCount: 0, expected: "UAT ✓"),
+            BadgeTextCase(result: .failed, failedCount: 3, expected: "UAT ✕ 3"),
+            BadgeTextCase(result: .failed, failedCount: 0, expected: "UAT ✕"),
+            BadgeTextCase(result: .skipped, failedCount: 0, expected: "UAT")
         ]
-        for (result, count, expected) in cases {
+        for tc in cases {
             XCTAssertEqual(
-                KanbanCardView.uatBadgeText(result: result, failedCount: count), expected,
-                "\(result) with failedCount \(count)"
+                KanbanCardView.uatBadgeText(result: tc.result, failedCount: tc.failedCount), tc.expected,
+                "\(tc.result) with failedCount \(tc.failedCount)"
             )
         }
     }
@@ -168,6 +177,26 @@ final class KanbanCardViewTests: XCTestCase {
         let label = makeCardView(card).cardAccessibilityLabel
         XCTAssertTrue(label.contains("Agent UAT failed, 1 test"), label)
         XCTAssertFalse(label.contains("1 tests"), label)
+    }
+
+    /// CR-801-3: nil/empty `failed_tests` must render "Agent UAT failed" with no
+    /// spurious "0 tests" suffix — mirrors the badge text fix in `uatBadgeText`.
+    func testAccessibilityLabel_Failed_NilFailedTests_OmitsZeroCount() throws {
+        let task = try makeEpicTask(uatFragment: #"{ "tier2": { "result": "failed" } }"#)
+        let card = makeCard(from: task)
+        let label = makeCardView(card).cardAccessibilityLabel
+        XCTAssertTrue(label.contains("Agent UAT failed"), label)
+        XCTAssertFalse(label.contains("0 test"), label)
+    }
+
+    func testAccessibilityLabel_Failed_EmptyFailedTests_OmitsZeroCount() throws {
+        let task = try makeEpicTask(
+            uatFragment: #"{ "tier2": { "result": "failed", "failed_tests": [] } }"#
+        )
+        let card = makeCard(from: task)
+        let label = makeCardView(card).cardAccessibilityLabel
+        XCTAssertTrue(label.contains("Agent UAT failed"), label)
+        XCTAssertFalse(label.contains("0 test"), label)
     }
 
     /// IS-800-10 / IS-BADGE-TOOLTIP-800-4: the skip reason must be reachable via the

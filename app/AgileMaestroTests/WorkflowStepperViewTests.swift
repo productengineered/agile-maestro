@@ -238,18 +238,26 @@ final class WorkflowStepperViewTests: XCTestCase {
 
     /// design4: Agent UAT never renders `.rejected` — it uses the same plain
     /// upcoming/current/completed states as every other step, with no result-based recoloring.
-    func testAgentUatCurrent_UsesPlainStateEvenWhenTaskHasRejectedResultElsewhere() throws {
-        // Agent UAT itself never reports "rejected" as a reviewResult; confirm the
-        // computed WorkflowStepState is still the plain `.current` case (view-level
-        // coloring, not a distinct state) so no special enum case was introduced.
+    ///
+    /// Genuinely distinct from `testAgentUatCurrent_WhenAwaiting`: the rejected result
+    /// lives on an EARLIER, non-agent-uat stage (code-review), while Agent UAT itself
+    /// hasn't run yet. Confirms no rejected-style coloring bleeds forward onto a step
+    /// that is still `.upcoming` — Agent UAT has no distinct rejected case to bleed into.
+    func testAgentUatUpcoming_WhenRejectedResultIsOnAnEarlierNonAgentUatStage() throws {
         let task = try makeTask(
-            type: "epic", status: "in_progress", reviewStage: "agent-uat", reviewResult: "awaiting"
+            type: "epic", status: "in_progress", reviewStage: "code-review", reviewResult: "rejected"
         )
         let steps = makeStepper(for: task).computeSteps(for: task)
+        // Epic stages: dev[0], code-review[1], qa[2], security[3],
+        // product-review[4], agent-uat[5], human-uat[6], done[7]
+        XCTAssertEqual(steps[1].state, .current, "Code Review should be current (orange in rejected state)")
+
         let agentUat = try XCTUnwrap(steps.first(where: { $0.id == "agent-uat" }))
-        XCTAssertEqual(agentUat.state, .current)
+        XCTAssertEqual(
+            agentUat.state, .upcoming,
+            "Agent UAT must remain plain .upcoming; a rejected result on an earlier stage must not recolor it"
+        )
         XCTAssertNotEqual(agentUat.state, .completed)
-        XCTAssertNotEqual(agentUat.state, .upcoming)
     }
 
     // MARK: - SM-STEPPER-001 State 8: product-review + awaiting
