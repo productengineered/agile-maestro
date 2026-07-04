@@ -154,7 +154,21 @@ struct AgileMaestroApp: App {
                     )
             },
             defaultValue: {
-                .newEmptySentinel()
+                // AM-803-5: consult the persisted tab registry synchronously
+                // (UserDefaults-backed, no async work needed) BEFORE any
+                // window exists, so the replay sequence is staged before the
+                // very first `ProductWindowContentView.init` runs. This
+                // closure always returns a throwaway sentinel — the actual
+                // restore happens in `ProductWindowContentView`'s launch
+                // replay `.task`, which converts this auto-presented window
+                // in place into the plan's first real entry (Path A).
+                let plan = WindowRegistryService.shared.loadLaunchPlan()
+                if case .migrateLegacy(let snapshot) = plan {
+                    WindowRegistryService.shared.confirmMigration(snapshot)
+                }
+                let actions = WindowReplayPlanner.plan(for: plan.snapshot)
+                WindowRestoreDataStore.shared.prepareLaunchReplay(actions)
+                return .newEmptySentinel()
             }
         )
         .defaultSize(width: 1200, height: 800)
@@ -226,12 +240,38 @@ struct ProductWindowContentView: View {
     /// This window's independent ViewModel graph. A new instance is created
     /// automatically whenever SwiftUI instantiates a new window for the
     /// `WindowGroup`.
-    @State private var windowContext = WindowContext()
+    @State private var windowContext: WindowContext
 
     /// Controls the "New Product..." sheet reached from the empty-tab CTA
     /// (M-800-1 -> M-800-2). Local to this window/tab, mirroring
     /// `SessionViewModel.showingNewProductSheet`'s role for `MainWindowView`.
     @State private var showingNewProductSheet = false
+
+    @Environment(\.openWindow) private var openWindow
+
+    /// Consults `WindowRestoreDataStore` for THIS identity's staged entry
+    /// (AM-803-5) at construction time, seeding `windowContext` with the
+    /// restored view mode and `SessionViewModel` with the restored
+    /// product/session — before `MainWindowView`'s `.task` ever runs. A
+    /// window opened outside the replay (Cmd+T, "Open in New Tab") has no
+    /// staged entry and gets today's defaults, unchanged.
+    init(identity: Binding<ProductWindowIdentity>) {
+        self._identity = identity
+        let restoreEntry = WindowRestoreDataStore.shared.consumeRestoreEntry(for: identity.wrappedValue)
+        var pendingRestore: PendingProductRestore?
+        if case .product(let productID) = identity.wrappedValue, let restoreEntry {
+            pendingRestore = PendingProductRestore(
+                productID: productID,
+                selectedSessionID: restoreEntry.selectedSessionID
+            )
+        }
+        self._windowContext = State(
+            wrappedValue: WindowContext(
+                sessionViewModel: SessionViewModel(pendingRestore: pendingRestore),
+                selectedViewMode: restoreEntry?.viewMode ?? .treeDetail
+            )
+        )
+    }
 
     var body: some View {
         content
@@ -241,6 +281,79 @@ struct ProductWindowContentView: View {
             .environment(windowContext.detailViewModel)
             .environment(windowContext.teamViewModel)
             .environment(windowContext)
+            .task {
+                await runLaunchReplayIfNeeded()
+            }
+            .onAppear {
+                WindowRegistrySaveCoordinator.shared.windowOpened(
+                    identity: identity,
+                    viewMode: windowContext.selectedViewMode,
+                    selectedSessionID: windowContext.sessionViewModel.selectedSession?.id
+                )
+            }
+            .onChange(of: identity) { oldValue, newValue in
+                WindowRegistrySaveCoordinator.shared.windowIdentityChanged(
+                    from: oldValue,
+                    to: newValue,
+                    viewMode: windowContext.selectedViewMode,
+                    selectedSessionID: windowContext.sessionViewModel.selectedSession?.id
+                )
+            }
+            .onChange(of: windowContext.selectedViewMode) { _, newValue in
+                WindowRegistrySaveCoordinator.shared.windowUpdated(
+                    identity: identity,
+                    viewMode: newValue,
+                    selectedSessionID: windowContext.sessionViewModel.selectedSession?.id
+                )
+            }
+            .onChange(of: windowContext.sessionViewModel.selectedSession?.id) { _, newValue in
+                WindowRegistrySaveCoordinator.shared.windowUpdated(
+                    identity: identity,
+                    viewMode: windowContext.selectedViewMode,
+                    selectedSessionID: newValue
+                )
+            }
+            .onDisappear {
+                WindowRegistrySaveCoordinator.shared.windowClosed(identity: identity)
+            }
+    }
+
+    /// Executes AM-803-5's launch-time tab replay exactly once per app run —
+    /// `WindowRestoreDataStore.consumeLaunchReplayActions()` returns `nil` for
+    /// every window after the first (including the ones this very method
+    /// opens), so this is a cheap no-op the rest of the time.
+    ///
+    /// The first `.open` action converts THIS window in place (Path A) rather
+    /// than opening a redundant extra window — this window is SwiftUI's
+    /// auto-presented default for the `defaultValue` empty sentinel, so
+    /// converting it avoids leaving a stray blank tab alongside the restored
+    /// ones. Every subsequent `.open` action opens a new window via
+    /// `openWindow(value:)`, each independently restoring its own entry via
+    /// this type's `init`. The trailing `.focus` action (if present)
+    /// re-invokes `openWindow(value:)` on the previously-active identity,
+    /// which dedups to focusing that already-open window (SM-TAB-800-T4).
+    private func runLaunchReplayIfNeeded() async {
+        guard let actions = WindowRestoreDataStore.shared.consumeLaunchReplayActions() else { return }
+
+        var hasConvertedThisWindow = false
+        for action in actions {
+            switch action {
+            case .open(let entryPlan) where !hasConvertedThisWindow:
+                hasConvertedThisWindow = true
+                identity = entryPlan.entry.identity
+                if case .product(let productID) = entryPlan.entry.identity {
+                    await windowContext.sessionViewModel.restoreSpecificProduct(
+                        productID: productID,
+                        selectedSessionID: entryPlan.entry.selectedSessionID
+                    )
+                }
+                windowContext.selectedViewMode = entryPlan.entry.viewMode ?? .treeDetail
+            case .open(let entryPlan):
+                openWindow(value: entryPlan.entry.identity)
+            case .focus(let activeIdentity):
+                openWindow(value: activeIdentity)
+            }
+        }
     }
 
     @ViewBuilder

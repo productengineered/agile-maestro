@@ -9,6 +9,11 @@
 /* Begin PBXBuildFile section */
 		E8265C635C4A65A8D2FFE2C0 /* WindowRegistryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9292462DA9C2E576365F6653 /* WindowRegistryService.swift */; };
 		76D4FF489C5F7273CCD5F303 /* WindowRegistryServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65A2A3C7F672894229733A3A /* WindowRegistryServiceTests.swift */; };
+		A20102F18A22494284E65B8F /* WindowReplayPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95A731B4AF394437B79EFF67 /* WindowReplayPlanner.swift */; };
+		0CC858445351495A8B2D27BB /* WindowRestoreDataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15DE7A56066241A1891E8C1D /* WindowRestoreDataStore.swift */; };
+		761ED3327D474358A7F8A63D /* WindowRegistrySaveCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E0A76975C49470CA2134E68 /* WindowRegistrySaveCoordinator.swift */; };
+		31B5D39B88EF4167B443D4B8 /* WindowReplayPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EBD5BBEA29F4401917F39F8 /* WindowReplayPlannerTests.swift */; };
+		D3971B5B2B654F76B6343DE9 /* WindowRegistrySaveCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B03875368F91476986F4123B /* WindowRegistrySaveCoordinatorTests.swift */; };
 		102F83EBBF964C694E9C9571 /* TaskReference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01CA16A30F58D9BBCD16C7B /* TaskReference.swift */; };
 		173DA1B1B703E4D3F9CDDC1C /* ProductServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EBD2606EE155EEDBC7737D4 /* ProductServiceTests.swift */; };
 		1842A11A07C7D24CE57AB0B2 /* TaskParserServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FBDC3CEA6B49B8150DAAE3A /* TaskParserServiceProtocol.swift */; };
@@ -192,6 +197,11 @@
 /* Begin PBXFileReference section */
 		9292462DA9C2E576365F6653 /* WindowRegistryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowRegistryService.swift; sourceTree = "<group>"; };
 		65A2A3C7F672894229733A3A /* WindowRegistryServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowRegistryServiceTests.swift; sourceTree = "<group>"; };
+		95A731B4AF394437B79EFF67 /* WindowReplayPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowReplayPlanner.swift; sourceTree = "<group>"; };
+		15DE7A56066241A1891E8C1D /* WindowRestoreDataStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowRestoreDataStore.swift; sourceTree = "<group>"; };
+		8E0A76975C49470CA2134E68 /* WindowRegistrySaveCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowRegistrySaveCoordinator.swift; sourceTree = "<group>"; };
+		6EBD5BBEA29F4401917F39F8 /* WindowReplayPlannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowReplayPlannerTests.swift; sourceTree = "<group>"; };
+		B03875368F91476986F4123B /* WindowRegistrySaveCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowRegistrySaveCoordinatorTests.swift; sourceTree = "<group>"; };
 		05DC19DDA40D48DF34DF5CD3 /* TaskItemDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskItemDecodingTests.swift; sourceTree = "<group>"; };
 		0FBDC3CEA6B49B8150DAAE3A /* TaskParserServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskParserServiceProtocol.swift; sourceTree = "<group>"; };
 		1177DF89E312D30D1F76D0AE /* SuggestedInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedInput.swift; sourceTree = "<group>"; };
@@ -538,6 +548,8 @@
 				7E33AFDD8D2F4C9DBF03ADDA /* EmptyTabFlowTests.swift */,
 				A753C7B26C9A423A9F129DC0 /* KanbanCardViewTests.swift */,
 				65A2A3C7F672894229733A3A /* WindowRegistryServiceTests.swift */,
+				6EBD5BBEA29F4401917F39F8 /* WindowReplayPlannerTests.swift */,
+				B03875368F91476986F4123B /* WindowRegistrySaveCoordinatorTests.swift */,
 			);
 			path = AgileMaestroTests;
 			sourceTree = "<group>";
@@ -558,6 +570,9 @@
 				8D14B751D1FD6A24E1E3D198 /* TaskSessionService.swift */,
 				7C9A0DB0BFB858BA29FF87A7 /* TaskSessionServiceProtocol.swift */,
 				9292462DA9C2E576365F6653 /* WindowRegistryService.swift */,
+				95A731B4AF394437B79EFF67 /* WindowReplayPlanner.swift */,
+				15DE7A56066241A1891E8C1D /* WindowRestoreDataStore.swift */,
+				8E0A76975C49470CA2134E68 /* WindowRegistrySaveCoordinator.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -830,6 +845,8 @@
 				FA6DFEAE56C58D953A10C0FA /* EmptyTabFlowTests.swift in Sources */,
 				1F9FA151A15C465F903E58CF /* KanbanCardViewTests.swift in Sources */,
 				76D4FF489C5F7273CCD5F303 /* WindowRegistryServiceTests.swift in Sources */,
+				31B5D39B88EF4167B443D4B8 /* WindowReplayPlannerTests.swift in Sources */,
+				D3971B5B2B654F76B6343DE9 /* WindowRegistrySaveCoordinatorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -972,6 +989,9 @@
 				ECF8A76EE5805B2BAE1DBE1C /* ProductListMenuItems.swift in Sources */,
 				861B1043AF531931D803FB99 /* AccessibilityIdentifiers.swift in Sources */,
 				E8265C635C4A65A8D2FFE2C0 /* WindowRegistryService.swift in Sources */,
+				A20102F18A22494284E65B8F /* WindowReplayPlanner.swift in Sources */,
+				0CC858445351495A8B2D27BB /* WindowRestoreDataStore.swift in Sources */,
+				761ED3327D474358A7F8A63D /* WindowRegistrySaveCoordinator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

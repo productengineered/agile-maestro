@@ -2,6 +2,12 @@ import Foundation
 import Observation
 import OSLog
 
+// swiftlint:disable file_length
+// AM-803-5 added pendingRestore/isHandlingReplayRestore (small, required
+// state) pushing this file just past the 600-line warning threshold; the
+// bulk of the new replay logic lives in SessionViewModel+Replay.swift to
+// avoid growing this file further.
+
 // MARK: - SessionViewModel
 
 /// Drives product and session selection for the app shell toolbar.
@@ -98,6 +104,11 @@ final class SessionViewModel {
     /// warning badges on chips whose backing directory is missing.
     private(set) var staleProductIDs: Set<UUID> = []
 
+    /// Set by `restoreSpecificProduct` (see `SessionViewModel+Replay.swift`,
+    /// AM-803-5) before its first suspension point so a racing
+    /// `loadProducts()` call for this window skips its own generic load.
+    private(set) var isHandlingReplayRestore = false
+
     // MARK: - Product CRUD Bindings
 
     /// Controls visibility of the New Product sheet in the toolbar.
@@ -122,6 +133,10 @@ final class SessionViewModel {
     private let fileWatcher: FileWatcherService
     private let defaults: UserDefaults
 
+    /// Product/session this window restores at first load (AM-803-5 replay),
+    /// overriding `loadProducts()`'s generic auto-selection. `nil` otherwise.
+    let pendingRestore: PendingProductRestore?
+
     private let logger = Logger.app
 
     // MARK: - Init
@@ -134,13 +149,15 @@ final class SessionViewModel {
     ///   - parserService: Service for parsing task JSON files.
     ///   - backupService: Service for copying session JSON files to a product backup directory.
     ///   - fileWatcher: Service for watching session directories for changes.
+    ///   - pendingRestore: Product/session to restore at first load (AM-803-5).
     init(
         productService: ProductServiceProtocol = ProductService.shared,
         sessionService: TaskSessionServiceProtocol = TaskSessionService.shared,
         parserService: TaskParserServiceProtocol = TaskParserService.shared,
         backupService: BackupServiceProtocol = BackupService.shared,
         fileWatcher: FileWatcherService = FileWatcherService(),
-        defaults: UserDefaults = .standard
+        defaults: UserDefaults = .standard,
+        pendingRestore: PendingProductRestore? = nil
     ) {
         self.productService = productService
         self.sessionService = sessionService
@@ -148,6 +165,7 @@ final class SessionViewModel {
         self.backupService = backupService
         self.fileWatcher = fileWatcher
         self.defaults = defaults
+        self.pendingRestore = pendingRestore
 
         setupFileWatcher()
     }
@@ -189,6 +207,9 @@ final class SessionViewModel {
     /// to auto-discover sessions directly from `~/.claude/tasks/` via `TaskSessionService`.
     /// Transitions `state` through `.loading` → `.loaded` or `.error`.
     func loadProducts() async {
+        // restoreSpecificProduct (AM-803-5) already owns this window's load.
+        guard !isHandlingReplayRestore else { return }
+
         state = .loading
         do {
             let loaded = try await productService.loadProducts()
@@ -196,7 +217,9 @@ final class SessionViewModel {
             logger.info("Loaded \(loaded.count) products")
             checkProductStaleness()
 
-            if let restored = restoreProduct(from: loaded) ?? loaded.first {
+            if let pendingRestore {
+                await applyPendingRestore(pendingRestore, availableProducts: loaded)
+            } else if let restored = restoreProduct(from: loaded) ?? loaded.first {
                 selectedProduct = restored
                 saveSelectedProductID(restored)
                 await loadSessions(for: restored)
@@ -585,5 +608,107 @@ final class SessionViewModel {
         guard let savedID = defaults.string(forKey: Self.lastProductIDKey),
               let uuid = UUID(uuidString: savedID) else { return nil }
         return products.first { $0.id == uuid }
+    }
+}
+
+// MARK: - PendingProductRestore
+
+/// A specific product + session a window should restore to at first load,
+/// overriding `SessionViewModel.loadProducts()`'s generic auto-selection
+/// (AM-803-5). Carries only a `Product.ID`, not a full `Product` — the
+/// launch replay only has `WindowRegistryEntry`/`ProductWindowIdentity` to
+/// work with; the live `Product` (and its staleness) is only known after
+/// `loadProducts()` fetches the current list.
+struct PendingProductRestore: Sendable, Equatable {
+    let productID: Product.ID
+    let selectedSessionID: UUID?
+}
+
+// MARK: - SessionViewModel + Replay (AM-803-5)
+//
+// Same-file extension (not a separate SessionViewModel+Replay.swift) so it
+// retains access to the class's `private(set)` state — Swift's `private`
+// access level is file-scoped, and these methods need to set `state`,
+// `products`, `selectedProduct`, `selectedSession`, `tasks`, `claudeTasks`,
+// `orphanedTasks`, and `isHandlingReplayRestore` directly.
+extension SessionViewModel {
+
+    /// Restores a specific product (and optionally a specific session) into
+    /// this window, bypassing `loadProducts()`'s generic auto-selection.
+    ///
+    /// Used by the launch-time replay for exactly one window per app launch:
+    /// the one converted in place from the auto-presented empty-sentinel
+    /// default (Path A, AM-803-1) rather than opened via `openWindow(value:)`.
+    /// Every other restored tab goes through `loadProducts()`'s
+    /// `pendingRestore`-aware branch instead, since its `SessionViewModel` is
+    /// constructed with `pendingRestore` already set.
+    ///
+    /// Sets `isHandlingReplayRestore` as the first statement, before any
+    /// suspension point, so a concurrently-scheduled
+    /// `MainWindowView.task { loadProducts() }` for this same window
+    /// (triggered by the `identity` mutation that shows `MainWindowView` for
+    /// the first time) reliably observes it and skips its own generic load —
+    /// both run on `@MainActor`, so whichever synchronous prefix executes
+    /// first "wins" the flag before the other is scheduled.
+    func restoreSpecificProduct(productID: Product.ID, selectedSessionID: UUID?) async {
+        isHandlingReplayRestore = true
+        state = .loading
+        do {
+            let loaded = try await productService.loadProducts()
+            products = loaded
+            checkProductStaleness()
+            await applyPendingRestore(
+                PendingProductRestore(productID: productID, selectedSessionID: selectedSessionID),
+                availableProducts: loaded
+            )
+        } catch let error as AgileMaestroError {
+            state = .error(error)
+        } catch {
+            state = .error(.productSaveFailed(underlying: error))
+        }
+    }
+
+    /// Shared "resolve the pending entry's product, then either restore its
+    /// session or skip sessions/watcher entirely if stale" logic, called from
+    /// both `loadProducts()`'s `pendingRestore` branch and
+    /// `restoreSpecificProduct(productID:selectedSessionID:)` above.
+    func applyPendingRestore(_ restore: PendingProductRestore, availableProducts: [Product]) async {
+        guard let product = availableProducts.first(where: { $0.id == restore.productID }) else {
+            // Product no longer exists (e.g. removed since last quit) — fall
+            // back to the same "most recently used" default loadProducts() uses.
+            if let fallback = restoreProduct(from: availableProducts) ?? availableProducts.first {
+                selectedProduct = fallback
+                saveSelectedProductID(fallback)
+                await loadSessions(for: fallback)
+            } else {
+                selectedProduct = nil
+                selectedSession = nil
+                await loadSessionsWithoutProduct()
+            }
+            return
+        }
+
+        selectedProduct = product
+        saveSelectedProductID(product)
+
+        guard !staleProductIDs.contains(product.id) else {
+            // IS-800-9: the tab still opens showing this product (the AM-600
+            // stale badge is already driven by staleProductIDs), but sessions
+            // are not loaded and the file watcher is never started for it.
+            selectedSession = nil
+            tasks = []
+            claudeTasks = []
+            orphanedTasks = []
+            state = .loaded
+            return
+        }
+
+        await loadSessions(for: product)
+
+        if let targetSessionID = restore.selectedSessionID,
+           selectedSession?.id != targetSessionID,
+           let match = sessions.first(where: { $0.id == targetSessionID }) {
+            await selectSession(match)
+        }
     }
 }

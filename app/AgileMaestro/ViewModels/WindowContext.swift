@@ -54,7 +54,7 @@ final class WindowContext {
     /// `MainWindowView` so a future second window (AM-803) does not share
     /// view mode selection with the first — each window's mode is part of
     /// its own independent product context (R2.1).
-    var selectedViewMode: ViewMode = .treeDetail
+    var selectedViewMode: ViewMode
 
     // MARK: - Init
 
@@ -71,17 +71,21 @@ final class WindowContext {
     ///   - kanbanViewModel: The kanban board ViewModel for this window.
     ///   - detailViewModel: The task detail ViewModel for this window.
     ///   - teamViewModel: The team roster ViewModel for this window.
+    ///   - selectedViewMode: Initial content view mode — AM-803-5's launch
+    ///     replay overrides this to restore a tab's persisted view mode.
     init(
         sessionViewModel: SessionViewModel = SessionViewModel(),
         treeViewModel: TreeViewModel = TreeViewModel(),
         kanbanViewModel: KanbanViewModel = KanbanViewModel(),
         detailViewModel: DetailViewModel = DetailViewModel(),
-        teamViewModel: TeamViewModel = TeamViewModel()
+        teamViewModel: TeamViewModel = TeamViewModel(),
+        selectedViewMode: ViewMode = .treeDetail
     ) {
         self.sessionViewModel = sessionViewModel
         self.treeViewModel = treeViewModel
         self.kanbanViewModel = kanbanViewModel
         self.detailViewModel = detailViewModel
         self.teamViewModel = teamViewModel
+        self.selectedViewMode = selectedViewMode
     }
 }
