@@ -72,6 +72,27 @@ final class WindowContextTests: XCTestCase {
         XCTAssertTrue(first.sessionViewModel.showingNewProductSheet)
     }
 
+    // MARK: - View Mode
+
+    /// Two separate `WindowContext` instances must be able to hold different
+    /// `selectedViewMode` values at the same time — proving view mode
+    /// selection is owned per-window (task-11 / AM-802-3), not shared global
+    /// state that happens to work only because there's currently one window.
+    func testTwoInstancesCanHoldDifferentSelectedViewModeValuesSimultaneously() {
+        let first = WindowContext()
+        let second = WindowContext()
+
+        // Baseline: both start with the same default.
+        XCTAssertEqual(first.selectedViewMode, .treeDetail)
+        XCTAssertEqual(second.selectedViewMode, .treeDetail)
+
+        first.selectedViewMode = .kanban
+        second.selectedViewMode = .team
+
+        XCTAssertEqual(first.selectedViewMode, .kanban)
+        XCTAssertEqual(second.selectedViewMode, .team)
+    }
+
     // MARK: - Dependency Injection
 
     /// `WindowContext`'s init parameters are defaulted but overridable, so a

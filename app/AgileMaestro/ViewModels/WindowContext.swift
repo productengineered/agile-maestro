@@ -45,6 +45,17 @@ final class WindowContext {
     /// Drives the team roster/pipeline/health tabs for this window.
     private(set) var teamViewModel: TeamViewModel
 
+    // MARK: - View Mode
+
+    /// The currently selected content view mode (tree+detail, kanban, or team)
+    /// for this window's main content area.
+    ///
+    /// Lives on `WindowContext` rather than as view-local `@State` on
+    /// `MainWindowView` so a future second window (AM-803) does not share
+    /// view mode selection with the first — each window's mode is part of
+    /// its own independent product context (R2.1).
+    var selectedViewMode: ViewMode = .treeDetail
+
     // MARK: - Init
 
     /// Creates a `WindowContext` with fresh (or injected) ViewModel instances.

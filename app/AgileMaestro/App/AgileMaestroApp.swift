@@ -74,7 +74,9 @@ struct AgileMaestroApp: App {
 /// Each ViewModel is injected into the environment individually via
 /// `.environment(_:)` so that descendant views — starting with `MainWindowView` —
 /// continue to read them with `@Environment(Type.self)`, exactly as before this
-/// refactor.
+/// refactor. `windowContext` itself is also injected so descendant views can
+/// read/write per-window state that lives directly on `WindowContext` (e.g.
+/// `selectedViewMode`) instead of falling back to view-local `@State`.
 struct AgileMaestroWindowContentView: View {
 
     /// This window's independent ViewModel graph. A new instance is created
@@ -89,6 +91,7 @@ struct AgileMaestroWindowContentView: View {
             .environment(windowContext.kanbanViewModel)
             .environment(windowContext.detailViewModel)
             .environment(windowContext.teamViewModel)
+            .environment(windowContext)
             // Minimum window size per FR-2.1 (800x600)
             .frame(minWidth: 800, minHeight: 600)
     }

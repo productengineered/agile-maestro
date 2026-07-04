@@ -6,9 +6,11 @@ import os
 /// Primary container for the app shell.
 ///
 /// Hosts the window toolbar and switches the content area between three view
-/// modes (tree+detail, kanban, team) based on `selectedViewMode`. Full-window
-/// state overlays (idle, loading, error) sit below the toolbar so the chips
-/// remain interactive during data loads.
+/// modes (tree+detail, kanban, team) based on `windowContext.selectedViewMode`.
+/// View mode selection lives on the injected `WindowContext` (not view-local
+/// `@State`) so a future second window does not share it with the first.
+/// Full-window state overlays (idle, loading, error) sit below the toolbar so
+/// the chips remain interactive during data loads.
 ///
 /// Product CRUD sheet/alert state lives on `SessionViewModel` so that
 /// `ProductChipMenu` can drive presentation without needing view-local bindings.
@@ -21,15 +23,13 @@ struct MainWindowView: View {
     @Environment(KanbanViewModel.self) private var kanbanViewModel
     @Environment(DetailViewModel.self) private var detailViewModel
     @Environment(TeamViewModel.self) private var teamViewModel
-
-    // MARK: - State
-
-    @State private var selectedViewMode: ViewMode = .treeDetail
+    @Environment(WindowContext.self) private var windowContext
 
     // MARK: - Body
 
     var body: some View {
         @Bindable var vm = sessionViewModel
+        @Bindable var context = windowContext
         contentArea
             .toolbar {
                 ToolbarItem(placement: .principal) {
@@ -56,7 +56,7 @@ struct MainWindowView: View {
 
                         Spacer()
 
-                        ViewModeSegment(selectedMode: $selectedViewMode)
+                        ViewModeSegment(selectedMode: $context.selectedViewMode)
 
                         Spacer()
 
@@ -135,7 +135,7 @@ struct MainWindowView: View {
 
     @ViewBuilder
     private var modeContent: some View {
-        switch selectedViewMode {
+        switch windowContext.selectedViewMode {
         case .treeDetail:
             TreeDetailView()
         case .kanban:
@@ -156,7 +156,7 @@ struct MainWindowView: View {
     /// - Parameter task: The task that was tapped.
     private func handleCardSelect(_ task: TaskItem) {
         withAnimation(.easeInOut(duration: 0.2)) {
-            selectedViewMode = .treeDetail
+            windowContext.selectedViewMode = .treeDetail
         }
         treeViewModel.revealTask(task.id)
     }
@@ -241,5 +241,6 @@ struct TreeDetailView: View {
         .environment(KanbanViewModel())
         .environment(DetailViewModel())
         .environment(TeamViewModel())
+        .environment(WindowContext())
         .frame(width: 1200, height: 800)
 }
