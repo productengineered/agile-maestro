@@ -63,11 +63,22 @@ final class WorkflowStepperViewTests: XCTestCase {
         XCTAssertEqual(steps.map(\.id), ["dev", "code-review", "qa", "product-review", "done"])
     }
 
-    func testEpicHasSixStages() throws {
+    func testEpicHasEightStages() throws {
         let task = try makeTask(type: "epic", status: "pending")
         let steps = makeStepper(for: task).computeSteps(for: task)
-        XCTAssertEqual(steps.count, 6, "Epic should have 6 stages")
-        XCTAssertEqual(steps.map(\.id), ["dev", "code-review", "qa", "security", "product-review", "done"])
+        XCTAssertEqual(steps.count, 8, "Epic should have 8 stages (Agent UAT inserted, task-5/AM-801-3)")
+        XCTAssertEqual(
+            steps.map(\.id),
+            ["dev", "code-review", "qa", "security", "product-review", "agent-uat", "human-uat", "done"]
+        )
+    }
+
+    /// SM-STEPPER-800-T5: story/task steppers never include "agent-uat", regardless of type.
+    func testStoryStepsNeverIncludeAgentUat() throws {
+        let task = try makeTask(type: "story", status: "pending")
+        let steps = makeStepper(for: task).computeSteps(for: task)
+        XCTAssertFalse(steps.map(\.id).contains("agent-uat"), "Story stepper must never show Agent UAT")
+        XCTAssertEqual(steps.count, 5, "Story stepper must remain 5 steps unchanged")
     }
 
     func testTaskTypeReturnsEmptySteps() throws {
@@ -122,7 +133,7 @@ final class WorkflowStepperViewTests: XCTestCase {
     func testState3_EpicCompleted_AllCompleted() throws {
         let task = try makeTask(type: "epic", status: "completed")
         let steps = makeStepper(for: task).computeSteps(for: task)
-        XCTAssertEqual(steps.count, 6)
+        XCTAssertEqual(steps.count, 8)
         XCTAssertTrue(steps.allSatisfy { $0.state == .completed })
     }
 
@@ -175,13 +186,70 @@ final class WorkflowStepperViewTests: XCTestCase {
             type: "epic", status: "in_progress", reviewStage: "security", reviewResult: "awaiting"
         )
         let steps = makeStepper(for: task).computeSteps(for: task)
-        // Epic stages: dev[0], code-review[1], qa[2], security[3], product-review[4], done[5]
+        // Epic stages: dev[0], code-review[1], qa[2], security[3],
+        // product-review[4], agent-uat[5], human-uat[6], done[7]
         XCTAssertEqual(steps[0].state, .completed)
         XCTAssertEqual(steps[1].state, .completed)
         XCTAssertEqual(steps[2].state, .completed)
         XCTAssertEqual(steps[3].state, .current, "Security should be current (pulsing)")
         XCTAssertEqual(steps[4].state, .upcoming)
         XCTAssertEqual(steps[5].state, .upcoming)
+        XCTAssertEqual(steps[6].state, .upcoming)
+        XCTAssertEqual(steps[7].state, .upcoming)
+    }
+
+    // MARK: - Agent UAT Step (task-5/AM-801-3, SM-STEPPER-800-T1..T4)
+
+    func testAgentUatUpcoming_WhenProductReviewCurrent() throws {
+        let task = try makeTask(
+            type: "epic", status: "in_progress", reviewStage: "product-review", reviewResult: "awaiting"
+        )
+        let steps = makeStepper(for: task).computeSteps(for: task)
+        let agentUat = try XCTUnwrap(steps.first(where: { $0.id == "agent-uat" }))
+        XCTAssertEqual(agentUat.state, .upcoming, "Agent UAT should be upcoming while Product Review is current")
+    }
+
+    func testAgentUatCurrent_WhenAwaiting() throws {
+        let task = try makeTask(
+            type: "epic", status: "in_progress", reviewStage: "agent-uat", reviewResult: "awaiting"
+        )
+        let steps = makeStepper(for: task).computeSteps(for: task)
+        let agentUat = try XCTUnwrap(steps.first(where: { $0.id == "agent-uat" }))
+        XCTAssertEqual(agentUat.state, .current, "Agent UAT should be current when it is the review stage")
+
+        // Everything before it should be completed, everything after upcoming.
+        let index = try XCTUnwrap(steps.firstIndex(where: { $0.id == "agent-uat" }))
+        for i in 0..<index {
+            XCTAssertEqual(steps[i].state, .completed, "Stage \(steps[i].id) should be completed before Agent UAT")
+        }
+        for i in (index + 1)..<steps.count {
+            XCTAssertEqual(steps[i].state, .upcoming, "Stage \(steps[i].id) should be upcoming after Agent UAT")
+        }
+    }
+
+    func testAgentUatCompleted_WhenHumanUatCurrent() throws {
+        let task = try makeTask(
+            type: "epic", status: "in_progress", reviewStage: "human-uat", reviewResult: "awaiting"
+        )
+        let steps = makeStepper(for: task).computeSteps(for: task)
+        let agentUat = try XCTUnwrap(steps.first(where: { $0.id == "agent-uat" }))
+        XCTAssertEqual(agentUat.state, .completed, "Agent UAT should be completed once Human UAT is current")
+    }
+
+    /// design4: Agent UAT never renders `.rejected` — it uses the same plain
+    /// upcoming/current/completed states as every other step, with no result-based recoloring.
+    func testAgentUatCurrent_UsesPlainStateEvenWhenTaskHasRejectedResultElsewhere() throws {
+        // Agent UAT itself never reports "rejected" as a reviewResult; confirm the
+        // computed WorkflowStepState is still the plain `.current` case (view-level
+        // coloring, not a distinct state) so no special enum case was introduced.
+        let task = try makeTask(
+            type: "epic", status: "in_progress", reviewStage: "agent-uat", reviewResult: "awaiting"
+        )
+        let steps = makeStepper(for: task).computeSteps(for: task)
+        let agentUat = try XCTUnwrap(steps.first(where: { $0.id == "agent-uat" }))
+        XCTAssertEqual(agentUat.state, .current)
+        XCTAssertNotEqual(agentUat.state, .completed)
+        XCTAssertNotEqual(agentUat.state, .upcoming)
     }
 
     // MARK: - SM-STEPPER-001 State 8: product-review + awaiting
@@ -296,6 +364,8 @@ final class WorkflowStepperViewTests: XCTestCase {
         XCTAssertEqual(steps[2].label, "QA")
         XCTAssertEqual(steps[3].label, "Security")
         XCTAssertEqual(steps[4].label, "Product\nReview")
-        XCTAssertEqual(steps[5].label, "Done")
+        XCTAssertEqual(steps[5].label, "Agent\nUAT")
+        XCTAssertEqual(steps[6].label, "Human\nUAT")
+        XCTAssertEqual(steps[7].label, "Done")
     }
 }

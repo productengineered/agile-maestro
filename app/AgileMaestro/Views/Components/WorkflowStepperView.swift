@@ -191,8 +191,11 @@ struct WorkflowStepperView: View {
 
         switch task.type {
         case .epic:
-            stageKeys   = ["dev", "code-review", "qa", "security", "product-review", "human-uat", "done"]
-            stageLabels = ["Dev", "Code\nReview", "QA", "Security", "Product\nReview", "Human\nUAT", "Done"]
+            // R1.4: "agent-uat" inserted between "product-review" and "human-uat".
+            stageKeys   = ["dev", "code-review", "qa", "security", "product-review",
+                           "agent-uat", "human-uat", "done"]
+            stageLabels = ["Dev", "Code\nReview", "QA", "Security", "Product\nReview",
+                           "Agent\nUAT", "Human\nUAT", "Done"]
         case .story:
             stageKeys   = ["dev", "code-review", "qa", "product-review", "done"]
             stageLabels = ["Dev", "Code\nReview", "QA", "Product\nReview", "Done"]
@@ -289,6 +292,13 @@ struct WorkflowStepperView: View {
 
 #Preview("Epic - QA Awaiting") {
     let task = PreviewTaskItemFactory.makeEpic(reviewStage: "qa", reviewResult: "awaiting")
+    return WorkflowStepperView(task: task)
+        .padding()
+        .frame(width: 500)
+}
+
+#Preview("Epic - Agent UAT Awaiting") {
+    let task = PreviewTaskItemFactory.makeEpic(reviewStage: "agent-uat", reviewResult: "awaiting")
     return WorkflowStepperView(task: task)
         .padding()
         .frame(width: 500)
