@@ -46,6 +46,9 @@
 		9EDB0BC281159CF1481AC479 /* AgileMaestroTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3045E2749CFB81FC2EB13430 /* AgileMaestroTests.swift */; };
 		A545536E42E5A4CAF1A8E0AD /* References.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A58A0D3E698D727829F947 /* References.swift */; };
 		AB4D882E496645DD8A8E4A4D /* WindowContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4099728080B4F128FBA2022 /* WindowContext.swift */; };
+		EF3511A133584A06A78B48CD /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09ED20682A4C48158052B759 /* AppDelegate.swift */; };
+		962BFB069D434A9FB1A05BEC /* WindowAccessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 612C5CE6C50A496286E060B7 /* WindowAccessor.swift */; };
+		04E61DE0CDC34FFFB7F25744 /* EmptyProductTabPlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9754088D3BC542E3948089B8 /* EmptyProductTabPlaceholderView.swift */; };
 		AE0DF41347D03AA54C68D143 /* Logger+Categories.swift in Sources */ = {isa = PBXBuildFile; fileRef = 929803BE114D004BBADD1439 /* Logger+Categories.swift */; };
 		B4DD6238AC84406441427F28 /* TimelineDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC545DB0685287EFC80B28EF /* TimelineDay.swift */; };
 		B595BE50B6D2ED0437AA927A /* ManifestService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F062AC158E0CAA41DEAF375 /* ManifestService.swift */; };
@@ -221,6 +224,9 @@
 		984FC5A8319FC5945BF2D893 /* Dependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Dependencies.swift; sourceTree = "<group>"; };
 		A0D53A6FAE1A7B4E97B67077 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
 		A4099728080B4F128FBA2022 /* WindowContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowContext.swift; sourceTree = "<group>"; };
+		09ED20682A4C48158052B759 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		612C5CE6C50A496286E060B7 /* WindowAccessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowAccessor.swift; sourceTree = "<group>"; };
+		9754088D3BC542E3948089B8 /* EmptyProductTabPlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyProductTabPlaceholderView.swift; sourceTree = "<group>"; };
 		A507E60B249D279ECC056FE0 /* StoryMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryMetadata.swift; sourceTree = "<group>"; };
 		A5C33376CB1BC1C503F58725 /* AgileMaestroUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AgileMaestroUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A879CF6B4B11DAF78BB9B9E3 /* TaskSpecificMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSpecificMetadata.swift; sourceTree = "<group>"; };
@@ -355,6 +361,7 @@
 			isa = PBXGroup;
 			children = (
 				494E857FC8EEEEC840E5596B /* AgileMaestroApp.swift */,
+				09ED20682A4C48158052B759 /* AppDelegate.swift */,
 				136C8C43CAA1E7F89CA254A3 /* Info.plist */,
 			);
 			path = App;
@@ -424,6 +431,7 @@
 				F6A0EAB72F68CF850048D487 /* KanbanColumnView.swift */,
 				F6A0EAB92F68D19A0048D487 /* KanbanFilterBarView.swift */,
 				F66BD5222F7846AD00A30480 /* Team */,
+				612C5CE6C50A496286E060B7 /* WindowAccessor.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -595,6 +603,7 @@
 				DCD60AF12F5E680D001961EE /* TaskDetailPlaceholder.swift */,
 				DCD60AF32F5E6813001961EE /* LoadingStateView.swift */,
 				DCD60AF72F5E681F001961EE /* TeamPlaceholderView.swift */,
+				9754088D3BC542E3948089B8 /* EmptyProductTabPlaceholderView.swift */,
 			);
 			path = States;
 			sourceTree = "<group>";
@@ -936,6 +945,9 @@
 				DCD60B012F5F8C9C001961EE /* PriorityBadgeView.swift in Sources */,
 				DCD60B092F5F8D60001961EE /* ProgressBarView.swift in Sources */,
 				AB4D882E496645DD8A8E4A4D /* WindowContext.swift in Sources */,
+				EF3511A133584A06A78B48CD /* AppDelegate.swift in Sources */,
+				962BFB069D434A9FB1A05BEC /* WindowAccessor.swift in Sources */,
+				04E61DE0CDC34FFFB7F25744 /* EmptyProductTabPlaceholderView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
