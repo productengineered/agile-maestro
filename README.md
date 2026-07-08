@@ -2,7 +2,7 @@
 
 A native macOS SwiftUI application that visualizes Claude Code task files as a full agile project management board. It reads the JSON task files from `~/.claude/tasks/` and renders them as a browsable hierarchy — epics, stories, tasks — the same way you'd track work in Jira or Linear.
 
-Built entirely by an AI development team powered by the [Claude Code Apple App Toolkit](https://github.com/productengineered/claude-code-apple-app-toolkit).
+Built entirely by an AI development team powered by the [Claude Code Apple App Toolkit](https://github.com/productengineered/claude-code-apple-app-toolkit) (not yet public).
 
 ---
 
