@@ -5,12 +5,18 @@ import SwiftUI
 /// Single row in the task tree sidebar.
 ///
 /// Renders: indentation spacer, chevron (if parent node), TypeIconView, numbered
-/// title (e.g. "88 - TechDebt: sign-in..."), spacer, child count badge (if parent
-/// node), and StatusDotView.
+/// title (e.g. "[88] sign-in with Apple ID" — the bracketed number leads a display
+/// subject with any redundant leading type prefix stripped, see
+/// `TaskItem.numberedSubject`), spacer, child count badge (if parent node), and
+/// StatusDotView.
 ///
 /// The number leads the subject as part of the title text so LLM agents and users
 /// can match a row to its task file at a glance. The number uses the same font,
 /// size, weight, and color as the title (.callout, .primary, lineLimit/truncation).
+/// Because the type prefix is stripped from the title text, the row's type icon
+/// (hidden from VoiceOver) and its accessibility label — which appends the task
+/// type independently of the title text — are what convey the type to screen
+/// reader users.
 ///
 /// Responds to selection (`.accentColor.opacity(0.15)` background) and hover
 /// (`.secondary.opacity(0.05)` background) state changes with animated fills.

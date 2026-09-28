@@ -241,14 +241,44 @@ extension TaskItem {
     }
 
     /// A row-leading label pairing the task's numeric identifier — which matches its
-    /// `.json` filename stem, e.g. id `"5"` for the file `5.json` — with its subject,
-    /// e.g. "88 - TechDebt: sign-in...".
+    /// `.json` filename stem, e.g. id `"5"` for the file `5.json` — with `displaySubject`,
+    /// e.g. "[88] sign-in with Apple ID".
     ///
     /// Sidebar tree rows lead with this number so LLM agents and users can match a
     /// row to its underlying task file at a glance. This is the single source used
-    /// for both the row's accessibility label and its unit tests — reuse it rather
-    /// than re-deriving the number elsewhere.
+    /// for both the row's visual title and its unit tests — reuse it rather than
+    /// re-deriving the number elsewhere. The row's type icon and accessibility label
+    /// separately convey the task type, so `displaySubject` strips any redundant
+    /// leading type prefix.
     var numberedSubject: String {
-        "\(id) - \(subject)"
+        "[\(id)] \(displaySubject)"
+    }
+
+    /// Precompiled, case-insensitive regex matching a leading task-type prefix —
+    /// "TechDebt:", "Tech Debt:", "Tech-Debt:", "Bug:", "Story:", "Epic:", or
+    /// "Task:" — at the very start of a subject string, tolerating leading
+    /// whitespace. `^` anchors to the start of the whole string, so a prefix
+    /// appearing mid-string (e.g. "Fix bug: foo") never matches.
+    ///
+    /// `nonisolated(unsafe)`: `Regex` isn't `Sendable` by protocol conformance,
+    /// but this value is an immutable compile-time literal — safe to share
+    /// across threads for read-only matching.
+    nonisolated(unsafe) private static let leadingTypePrefixPattern =
+        /^\s*(?:tech[ -]?debt|bug|story|epic|task)\s*:\s*/.ignoresCase()
+
+    /// `subject` with any redundant leading type prefix stripped, for DISPLAY
+    /// ONLY — this never mutates the underlying task file. The task type is
+    /// already conveyed by the row's icon and accessibility label, so repeating
+    /// it as text in the subject is redundant.
+    ///
+    /// Falls back to the full, unstripped `subject` when there is no leading
+    /// prefix to strip, or when stripping the prefix would leave nothing behind
+    /// (a prefix-only subject like `"TechDebt:"`).
+    var displaySubject: String {
+        guard let match = subject.firstMatch(of: Self.leadingTypePrefixPattern) else {
+            return subject
+        }
+        let remainder = subject[match.range.upperBound...]
+        return remainder.isEmpty ? subject : String(remainder)
     }
 }
