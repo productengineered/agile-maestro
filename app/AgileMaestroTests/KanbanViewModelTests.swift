@@ -699,4 +699,61 @@ extension KanbanViewModelTests {
         let card = try XCTUnwrap(sut.allCards.first)
         XCTAssertNil(card.progress)
     }
+
+    /// TechDebt 3 / Bug 1 RCA: an epic with bugs/techdebt attached directly to it (not
+    /// via a story) previously counted them toward the "stories" total, e.g. epic 9
+    /// showing 26 "stories" for 16 real stories + 10 linked bugs/techdebt. Progress
+    /// must count stories only; linked items surface via `linkedCount`.
+    func testEpicProgressCountsOnlyStoriesAndSurfacesLinkedItemsSeparately() throws {
+        let epic = try makeItem(id: "epic-1", type: "epic")
+        let storyDone = try makeItem(id: "s-done", type: "story",
+                                     status: "completed", parentId: "epic-1")
+        let storyPending = try makeItem(id: "s-pending", type: "story", parentId: "epic-1")
+        let linkedBug = try makeItem(id: "b-1", type: "bug", parentId: "epic-1")
+        let linkedTechdebt = try makeItem(id: "td-1", type: "techdebt", parentId: "epic-1")
+        sut.setTasks([epic, storyDone, storyPending, linkedBug, linkedTechdebt])
+
+        let epicCard = try XCTUnwrap(sut.allCards.first { $0.id == "epic-1" })
+        let progress = try XCTUnwrap(epicCard.progress)
+        XCTAssertEqual(progress.completed, 1, "only the completed story counts")
+        XCTAssertEqual(progress.total, 2, "only stories count toward the total, not the 2 linked items")
+        XCTAssertEqual(progress.unit, "stories")
+        XCTAssertEqual(progress.linkedCount, 2, "the bug + techdebt attached directly to the epic")
+    }
+
+    /// A story's own progress unit ("tasks") already includes bugs/techdebt parented
+    /// directly to the story (per `TaskItem.isTask` / the sidebar's leaf-item rule) —
+    /// this is unchanged by the epic-only fix above. Locks in that story progress
+    /// still counts mixed leaf types together as "tasks", not split out.
+    func testStoryProgressCountsMixedLeafTypesTogetherAsTasks() throws {
+        let story = try makeItem(id: "story-1", type: "story")
+        let taskDone = try makeItem(id: "t-done", type: "task",
+                                    status: "completed", parentId: "story-1")
+        let bug = try makeItem(id: "b-1", type: "bug", parentId: "story-1")
+        let techdebt = try makeItem(id: "td-1", type: "techdebt", parentId: "story-1")
+        sut.setTasks([story, taskDone, bug, techdebt])
+
+        let storyCard = try XCTUnwrap(sut.allCards.first { $0.id == "story-1" })
+        let progress = try XCTUnwrap(storyCard.progress)
+        XCTAssertEqual(progress.completed, 1)
+        XCTAssertEqual(progress.total, 3, "task + bug + techdebt all count toward a story's total")
+        XCTAssertEqual(progress.unit, "tasks")
+        XCTAssertEqual(progress.linkedCount, 0, "linkedCount is an epic-only concept")
+    }
+
+    /// An epic with zero stories but linked bugs/techdebt still renders a progress
+    /// row (0 of 0 stories · N linked) rather than nil — the card's children are
+    /// not empty, they just aren't stories.
+    func testEpicWithOnlyLinkedItemsShowsZeroStoriesAndLinkedCount() throws {
+        let epic = try makeItem(id: "epic-2", type: "epic")
+        let bug = try makeItem(id: "b-1", type: "bug", parentId: "epic-2")
+        sut.setTasks([epic, bug])
+
+        let epicCard = try XCTUnwrap(sut.allCards.first { $0.id == "epic-2" })
+        let progress = try XCTUnwrap(epicCard.progress)
+        XCTAssertEqual(progress.completed, 0)
+        XCTAssertEqual(progress.total, 0)
+        XCTAssertEqual(progress.unit, "stories")
+        XCTAssertEqual(progress.linkedCount, 1)
+    }
 }

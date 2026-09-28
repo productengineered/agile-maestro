@@ -7,6 +7,18 @@ struct KanbanProgress {
     let completed: Int
     let total: Int
     let unit: String
+
+    /// Count of bugs/techdebt attached directly to an epic (not counted in
+    /// `total`/`unit`, which represent story progress only). Zero for story
+    /// cards, and for epics with no directly-linked bugs/techdebt.
+    let linkedCount: Int
+
+    init(completed: Int, total: Int, unit: String, linkedCount: Int = 0) {
+        self.completed = completed
+        self.total = total
+        self.unit = unit
+        self.linkedCount = linkedCount
+    }
 }
 
 // MARK: - KanbanCard

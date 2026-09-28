@@ -108,7 +108,7 @@ struct KanbanCardView: View {
                             )
                             .accessibilityHidden(true) // decorative; label below covers
 
-                            Text("\(progress.completed) of \(progress.total) \(progress.unit)")
+                            Text(Self.progressText(progress))
                                 .font(.caption2)
                                 .foregroundStyle(.tertiary)
                                 .monospacedDigit()
@@ -154,6 +154,18 @@ struct KanbanCardView: View {
     /// Computes the badge's display text for a given Tier-2 result. Extracted as a pure,
     /// non-view function (not `private`) so it is directly unit testable, matching the
     /// `computeSteps(for:)` testability pattern used by `WorkflowStepperView`.
+    /// Formats a `KanbanProgress` for display: "N of M unit" plus, when the epic
+    /// has bugs/techdebt attached directly to it, " · N linked" (TechDebt 3).
+    /// Extracted as a pure, non-view function so it is directly unit testable,
+    /// matching the `uatBadgeText(...)` / `computeSteps(for:)` precedent.
+    static func progressText(_ progress: KanbanProgress) -> String {
+        var text = "\(progress.completed) of \(progress.total) \(progress.unit)"
+        if progress.linkedCount > 0 {
+            text += " · \(progress.linkedCount) linked"
+        }
+        return text
+    }
+
     static func uatBadgeText(result: UATTier2Result, failedCount: Int) -> String {
         switch result {
         case .passed: return "UAT ✓"
@@ -228,7 +240,7 @@ struct KanbanCardView: View {
         }
 
         if let progress = card.progress {
-            label += ", \(progress.completed) of \(progress.total) \(progress.unit)"
+            label += ", \(Self.progressText(progress))"
         }
         return label
     }

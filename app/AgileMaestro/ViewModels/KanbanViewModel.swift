@@ -274,6 +274,15 @@ final class KanbanViewModel {
     // MARK: - Private: Progress
 
     /// Builds a `KanbanProgress` for epics and stories (child task counts).
+    ///
+    /// Epics can have bugs/techdebt attached directly to them (not via a story) —
+    /// mirroring the epic-attach rule in `TreeViewModel.buildEpicNodes` (sidebar,
+    /// commit 2b262d3) and `DetailViewModel.linkedItems` (Epic Overview, commit
+    /// 27cad18). Those linked items are NOT stories, so the epic's progress must
+    /// count and label story children only; linked bugs/techdebt are surfaced
+    /// separately via `KanbanProgress.linkedCount` rather than inflating the
+    /// "stories" count (TechDebt 3 / Bug 1 RCA — epic 9 previously showed 26
+    /// "stories" for 16 real stories + 10 linked bugs/techdebt).
     private func makeProgress(
         for task: TaskItem,
         taskLookup: [String: TaskItem],
@@ -289,9 +298,20 @@ final class KanbanViewModel {
         }
         guard !children.isEmpty else { return nil }
 
-        let completed = children.filter { $0.status == .completed }.count
-        let unit = task.type == .epic ? "stories" : "tasks"
-        return KanbanProgress(completed: completed, total: children.count, unit: unit)
+        guard task.type == .epic else {
+            let completed = children.filter { $0.status == .completed }.count
+            return KanbanProgress(completed: completed, total: children.count, unit: "tasks")
+        }
+
+        let storyChildren = children.filter { $0.type == .story }
+        let linkedChildren = children.filter { $0.type == .bug || $0.type == .techdebt }
+        let completedStories = storyChildren.filter { $0.status == .completed }.count
+        return KanbanProgress(
+            completed: completedStories,
+            total: storyChildren.count,
+            unit: "stories",
+            linkedCount: linkedChildren.count
+        )
     }
 
     // MARK: - Private: CompletedAt

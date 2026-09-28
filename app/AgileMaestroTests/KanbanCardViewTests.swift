@@ -232,4 +232,26 @@ final class KanbanCardViewTests: XCTestCase {
         XCTAssertTrue(label.contains("Agent UAT failed, 1 test"), label)
         XCTAssertTrue(label.contains("2 of 5 stories"), label)
     }
+
+    // MARK: - Progress Text (KanbanCardView.progressText — TechDebt 3)
+
+    func testProgressText_NoLinkedItems_OmitsLinkedSegment() {
+        let progress = KanbanProgress(completed: 3, total: 8, unit: "stories")
+        XCTAssertEqual(KanbanCardView.progressText(progress), "3 of 8 stories")
+    }
+
+    func testProgressText_WithLinkedItems_AppendsLinkedSegment() {
+        let progress = KanbanProgress(completed: 16, total: 16, unit: "stories", linkedCount: 10)
+        XCTAssertEqual(KanbanCardView.progressText(progress), "16 of 16 stories · 10 linked")
+    }
+
+    func testAccessibilityLabel_IncludesLinkedCount() throws {
+        let task = try makeEpicTask()
+        let card = makeCard(
+            from: task,
+            progress: KanbanProgress(completed: 16, total: 16, unit: "stories", linkedCount: 10)
+        )
+        let label = makeCardView(card).cardAccessibilityLabel
+        XCTAssertTrue(label.contains("16 of 16 stories · 10 linked"), label)
+    }
 }
