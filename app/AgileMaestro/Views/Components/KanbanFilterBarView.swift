@@ -9,6 +9,11 @@ import SwiftUI
 /// Uses a native segmented `Picker` for type filtering and a native `Menu` dropdown
 /// for epic filtering. Item count shows "[N] items" or "[N] of [M] items" when a
 /// filter is active.
+///
+/// The type Picker sizes with `.fixedSize()` (its label set is fixed and known).
+/// The epic Menu label is bounded (`epicLabelMaxWidth`) with middle truncation
+/// instead, because epic IDs are unbounded free-form project data — the full
+/// name remains available via the menu items, accessibility label, and tooltip.
 struct KanbanFilterBarView: View {
     @Binding var typeFilter: KanbanTypeFilter
     @Binding var epicFilter: String?
@@ -33,6 +38,12 @@ struct KanbanFilterBarView: View {
     private var epicMenuLabel: String {
         epicFilter ?? "All Epics"
     }
+
+    /// Bounds the epic Menu label so an unbounded epic ID (TaskItem.displayId,
+    /// e.g. "CASHFLOW-705-1") cannot widen the filter bar past its row. Truncated
+    /// with `.truncationMode(.middle)`; the full name stays available in the menu
+    /// items, the accessibility label, and the `.help()` tooltip.
+    private static let epicLabelMaxWidth: CGFloat = 140
 
     var body: some View {
         HStack(spacing: 12) {
@@ -76,6 +87,9 @@ struct KanbanFilterBarView: View {
                     Text(epicMenuLabel)
                         .font(.callout)
                         .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .frame(maxWidth: Self.epicLabelMaxWidth, alignment: .leading)
                     Image(systemName: "chevron.down")
                         .font(.caption2)
                         .fontWeight(.medium)
@@ -84,10 +98,14 @@ struct KanbanFilterBarView: View {
                 }
             }
             .menuStyle(.borderlessButton)
-            .fixedSize() // size to intrinsic content width; never compress/overlap neighbors
+            // Bounded (not .fixedSize()): epicId is unbounded free-form project data
+            // (TaskItem.displayId). An unbounded label would reintroduce the overflow
+            // bug this view fixes. Full name remains in menu items, accessibility
+            // label, and the help tooltip below.
             .disabled(availableEpicIDs.isEmpty && epicFilter == nil)
             .accessibilityLabel("Filter by epic, currently \(epicMenuLabel)")
             .accessibilityHint("Select to show only items from a specific epic")
+            .help(epicMenuLabel)
 
             Spacer()
 
@@ -143,4 +161,16 @@ struct KanbanFilterBarView: View {
     )
     .background(.bar)
     .frame(width: 900)
+}
+
+#Preview("Filter Bar — Long Epic Name") {
+    KanbanFilterBarView(
+        typeFilter: .constant(.techdebt),
+        epicFilter: .constant("CASHFLOW-705-1-migrate-legacy-reporting-pipeline"),
+        filteredCount: 3,
+        totalCount: 42,
+        availableEpicIDs: ["AM-300", "CASHFLOW-705-1-migrate-legacy-reporting-pipeline"]
+    )
+    .background(.bar)
+    .frame(width: 800)
 }
