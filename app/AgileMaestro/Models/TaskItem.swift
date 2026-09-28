@@ -251,7 +251,21 @@ extension TaskItem {
     /// separately convey the task type, so `displaySubject` strips any redundant
     /// leading type prefix.
     var numberedSubject: String {
-        "[\(id)] \(displaySubject)"
+        "[\(sidebarNumber)] \(displaySubject)"
+    }
+
+    /// The number shown in `numberedSubject` and, transitively, the row's
+    /// accessibility label — sourced from `sourceFile`'s filename stem (e.g. `"5"`
+    /// for `5.json`) when `TaskParserService` has set it, falling back to `id`
+    /// otherwise (e.g. tasks decoded directly in tests, with no `sourceFile` set).
+    ///
+    /// `id` falls back to a random UUID when the source JSON lacks an `"id"` key
+    /// (see `init(from:)`), so preferring the filename stem keeps the sidebar
+    /// number stable and meaningful even for files missing that key.
+    private var sidebarNumber: String {
+        guard let sourceFile else { return id }
+        let stem = (sourceFile as NSString).deletingPathExtension
+        return stem.isEmpty ? id : stem
     }
 
     /// Precompiled, case-insensitive regex matching a leading task-type prefix —

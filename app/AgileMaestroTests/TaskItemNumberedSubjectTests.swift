@@ -184,6 +184,27 @@ final class TaskItemNumberedSubjectTests: XCTestCase {
         XCTAssertEqual(task.numberedSubject, "[7] ")
     }
 
+    // MARK: - Sidebar number source: sourceFile stem vs id fallback (task-5, CodeRabbit)
+
+    /// When `sourceFile` is set (post-parse, by `TaskParserService`), its filename
+    /// stem wins over `id` — even when `id` differs (e.g. a JSON file whose `"id"`
+    /// key doesn't match its own filename).
+    func testNumberedSubjectPrefersSourceFileStemOverId() throws {
+        var task = try decodeTask(makeTaskJSON(id: "999", subject: "Some task", type: "task"))
+        task.sourceFile = "12.json"
+
+        XCTAssertEqual(task.numberedSubject, "[12] Some task")
+    }
+
+    /// With no `sourceFile` set (e.g. a task decoded directly in a test, never
+    /// routed through `TaskParserService`), `numberedSubject` falls back to `id`.
+    func testNumberedSubjectFallsBackToIdWhenNoSourceFile() throws {
+        let task = try decodeTask(makeTaskJSON(id: "42", subject: "Some task", type: "task"))
+
+        XCTAssertNil(task.sourceFile)
+        XCTAssertEqual(task.numberedSubject, "[42] Some task")
+    }
+
     // MARK: - Accessibility label still conveys the type after stripping
 
     /// `TreeRowView`'s type icon is hidden from VoiceOver, and its accessibility
