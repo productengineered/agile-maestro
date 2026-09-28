@@ -4,8 +4,9 @@ import SwiftUI
 
 /// Segmented picker for switching between Tree, Kanban, and Team view modes.
 ///
-/// Placed in the `.principal` (center) toolbar position. Fixed at 180 pt wide
-/// to ensure all three segments render correctly with icon and label.
+/// Placed in the `.principal` (center) toolbar position. Uses `.fixedSize()` so
+/// the control sizes to its intrinsic content width, ensuring all three segments
+/// render correctly with icon and label without clipping or overlap.
 ///
 /// The `.onChange` handler is intentionally empty — animation on mode switch
 /// is applied in `MainWindowView` at the content area level.
@@ -23,6 +24,6 @@ struct ViewModeSegment: View {
                 .tag(ViewMode.team)
         }
         .pickerStyle(.segmented)
-        .frame(width: 180)
+        .fixedSize() // size to intrinsic content width; never compress/clip segments
     }
 }

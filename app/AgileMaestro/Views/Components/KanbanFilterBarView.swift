@@ -46,7 +46,7 @@ struct KanbanFilterBarView: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .frame(maxWidth: 360) // prevent picker from stretching full width
+            .fixedSize() // size to intrinsic content width; never stretch or clip
             .accessibilityLabel("Filter by type")
             .accessibilityHint("Select to show only items of that type")
 
@@ -84,6 +84,7 @@ struct KanbanFilterBarView: View {
                 }
             }
             .menuStyle(.borderlessButton)
+            .fixedSize() // size to intrinsic content width; never compress/overlap neighbors
             .disabled(availableEpicIDs.isEmpty && epicFilter == nil)
             .accessibilityLabel("Filter by epic, currently \(epicMenuLabel)")
             .accessibilityHint("Select to show only items from a specific epic")
