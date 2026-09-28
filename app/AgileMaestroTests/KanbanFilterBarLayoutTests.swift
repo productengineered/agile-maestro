@@ -59,6 +59,13 @@ final class KanbanFilterBarLayoutTests: XCTestCase {
     /// (proven empirically to run past 1000pt — see task-6 fix comment).
     private static let epicMenuMaxRealWidth: CGFloat = 220
 
+    private var hostedWindows: [NSWindow] = []
+
+    override func tearDown() {
+        hostedWindows.removeAll()
+        super.tearDown()
+    }
+
     private func representativeEpicIDs() -> [String] {
         ["AM-300", "AM-400", "AM-500"]
     }
@@ -70,8 +77,14 @@ final class KanbanFilterBarLayoutTests: XCTestCase {
     /// AppKit-backed SwiftUI controls (e.g. the segmented Picker's real
     /// `NSSegmentedControl`, the epic Menu's real `NSPopUpButton`) get real, placed
     /// frames rather than just SwiftUI's negotiated `sizeThatFits` result.
+    /// Returns both the hosting view and the window; the window is retained by the test
+    /// property `hostedWindows` to prevent deallocation during assertions.
     @MainActor
-    private func hostAndLayout<V: View>(_ view: V, width: CGFloat, height: CGFloat = 60) -> NSHostingView<V> {
+    private func hostAndLayout<V: View>(
+        _ view: V,
+        width: CGFloat,
+        height: CGFloat = 60
+    ) -> (NSHostingView<V>, NSWindow) {
         let hostingView = NSHostingView(rootView: view)
         let contentRect = NSRect(x: 0, y: 0, width: width, height: height)
         hostingView.frame = contentRect
@@ -85,7 +98,8 @@ final class KanbanFilterBarLayoutTests: XCTestCase {
         window.contentView = hostingView
         window.layoutIfNeeded()
         hostingView.layoutSubtreeIfNeeded()
-        return hostingView
+        hostedWindows.append(window)
+        return (hostingView, window)
     }
 
     /// Recursively searches `view`'s real (post-layout) subview tree for the first
@@ -122,7 +136,7 @@ final class KanbanFilterBarLayoutTests: XCTestCase {
             totalCount: 42,
             availableEpicIDs: representativeEpicIDs()
         )
-        let hostingView = hostAndLayout(view, width: Self.minimumWindowWidth)
+        let (hostingView, _) = hostAndLayout(view, width: Self.minimumWindowWidth)
 
         let segmentedControl = try XCTUnwrap(
             findSubview(ofType: NSSegmentedControl.self, in: hostingView),
@@ -164,7 +178,7 @@ final class KanbanFilterBarLayoutTests: XCTestCase {
             totalCount: 42,
             availableEpicIDs: representativeEpicIDs()
         )
-        let hostingView = hostAndLayout(view, width: Self.minimumWindowWidth)
+        let (hostingView, _) = hostAndLayout(view, width: Self.minimumWindowWidth)
 
         let segmentedControl = try XCTUnwrap(
             findSubview(ofType: NSSegmentedControl.self, in: hostingView),
@@ -195,7 +209,7 @@ final class KanbanFilterBarLayoutTests: XCTestCase {
             totalCount: 42,
             availableEpicIDs: representativeEpicIDs()
         )
-        let hostingView = hostAndLayout(view, width: Self.minimumWindowWidth)
+        let (hostingView, _) = hostAndLayout(view, width: Self.minimumWindowWidth)
 
         let segmentedControl = try XCTUnwrap(
             findSubview(ofType: NSSegmentedControl.self, in: hostingView),
@@ -231,7 +245,7 @@ final class KanbanFilterBarLayoutTests: XCTestCase {
             totalCount: 42,
             availableEpicIDs: [veryLongEpicID]
         )
-        let hostingView = hostAndLayout(view, width: Self.minimumWindowWidth)
+        let (hostingView, _) = hostAndLayout(view, width: Self.minimumWindowWidth)
 
         let segmentedControl = try XCTUnwrap(
             findSubview(ofType: NSSegmentedControl.self, in: hostingView),
