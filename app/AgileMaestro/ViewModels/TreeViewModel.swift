@@ -7,7 +7,9 @@ import os
 ///
 /// Responsibilities:
 /// - Groups epics as root nodes, attaches stories to matching epic parents,
-///   attaches tasks/bugs/techdebt to matching story parents.
+///   attaches tasks to matching story parents, and attaches bugs/techdebt to
+///   matching story OR epic parents (bugs/techdebt attached to an epic render
+///   as epic children, after the epic's story children).
 /// - Separates orphan bugs and techdebt (items whose parent doesn't match any
 ///   epic in the current set) into dedicated sections.
 /// - Tracks `selectedNodeID` and `selectedTask` for sidebar selection.
@@ -161,7 +163,12 @@ final class TreeViewModel {
         let storyNodes = buildStoryNodes(
             stories: stories, leafItems: leafItems, expandedIDs: expandedIDs)
         let epicNodes = buildEpicNodes(
-            epics: epics, stories: stories, storyNodes: storyNodes, expandedIDs: expandedIDs)
+            epics: epics,
+            stories: stories,
+            storyNodes: storyNodes,
+            leafItems: leafItems,
+            expandedIDs: expandedIDs
+        )
 
         rootNodes = epicNodes
         orphanBugNodes = buildOrphanNodes(
@@ -262,13 +269,23 @@ final class TreeViewModel {
         epics: [TaskItem],
         stories: [TaskItem],
         storyNodes: [String: TreeNode],
+        leafItems: [TaskItem],
         expandedIDs: Set<String>
     ) -> [TreeNode] {
         epics.map { epic in
-            let children = stories
+            let storyChildren = stories
                 .filter { $0.resolvedParentId(in: allTasks) == epic.id }
                 .compactMap { storyNodes[$0.id] }
-            let node = TreeNode(task: epic, children: children)
+            // Bugs/techdebt parented directly to this epic render as epic children
+            // too, appended AFTER the story children so existing ordering
+            // assumptions (epic.children[0] == first story) keep holding.
+            let leafChildren = leafItems
+                .filter {
+                    guard $0.type == .bug || $0.type == .techdebt else { return false }
+                    return $0.resolvedParentId(in: allTasks) == epic.id
+                }
+                .map { makeNode($0, expandedIDs: expandedIDs) }
+            let node = TreeNode(task: epic, children: storyChildren + leafChildren)
             node.isExpanded = expandedIDs.contains(epic.id)
             return node
         }
@@ -283,8 +300,10 @@ final class TreeViewModel {
     ) -> [TreeNode] {
         // Tasks (.task type) have stories as their valid parents, not epics.
         // A task whose resolved parent matches an epic ID is therefore orphaned.
-        // Bugs and techdebt treat both epic and story IDs as valid parents
-        // (they can be attached directly to an epic).
+        // Bugs and techdebt treat both epic and story IDs as valid parents because
+        // buildEpicNodes and buildStoryNodes both attach them directly as children
+        // of a matching epic or story; this filter only needs to exclude those
+        // already-attached items from the orphan sections below.
         let validParentIDs: Set<String> = taskType == .task
             ? storyIDSet
             : epicIDSet.union(storyIDSet)

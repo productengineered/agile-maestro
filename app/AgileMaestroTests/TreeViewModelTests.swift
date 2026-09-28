@@ -243,6 +243,81 @@ final class TreeViewModelTests: XCTestCase {
         XCTAssertTrue(childIDs.contains("60"), "TechDebt appears under story")
     }
 
+    // MARK: - buildTree: Epic-Parented Bugs/TechDebt (Bug 1 fix)
+
+    /// Regression test for Bug 1: a bug whose parent is an epic (not a story) must
+    /// appear as a child of that epic, after the epic's story children, and must
+    /// NOT appear in orphanBugNodes.
+    func testEpicParentedBugAppearsUnderEpicAfterStoryChildren() throws {
+        let epic = try makeItem(id: "1", type: "epic")
+        let story = try makeItem(id: "10", type: "story", parentId: "1")
+        let epicBug = try makeItem(id: "80", type: "bug", parentId: "1")
+
+        sut.buildTree(from: [epic, story, epicBug])
+
+        let epicNode = sut.rootNodes[0]
+        XCTAssertEqual(epicNode.children.count, 2, "Epic has both the story and the epic-parented bug as children")
+        XCTAssertEqual(epicNode.children[0].id, "10", "Story children come first")
+        XCTAssertEqual(epicNode.children[1].id, "80", "Epic-parented bug is appended after story children")
+        XCTAssertTrue(sut.orphanBugNodes.isEmpty, "Epic-parented bug must not appear in the orphan list")
+    }
+
+    /// Regression test for Bug 1: a techdebt item whose parent is an epic must
+    /// appear as a child of that epic, after the epic's story children, and must
+    /// NOT appear in orphanTechDebtNodes.
+    func testEpicParentedTechDebtAppearsUnderEpicAfterStoryChildren() throws {
+        let epic = try makeItem(id: "1", type: "epic")
+        let story = try makeItem(id: "10", type: "story", parentId: "1")
+        let epicTechDebt = try makeItem(id: "90", type: "techdebt", parentId: "1")
+
+        sut.buildTree(from: [epic, story, epicTechDebt])
+
+        let epicNode = sut.rootNodes[0]
+        XCTAssertEqual(
+            epicNode.children.count, 2, "Epic has both the story and the epic-parented techdebt as children")
+        XCTAssertEqual(epicNode.children[0].id, "10", "Story children come first")
+        XCTAssertEqual(epicNode.children[1].id, "90", "Epic-parented techdebt is appended after story children")
+        XCTAssertTrue(sut.orphanTechDebtNodes.isEmpty, "Epic-parented techdebt must not appear in the orphan list")
+    }
+
+    /// Regression test for Bug 1: an epic with ONLY bug/techdebt children (no stories)
+    /// still attaches both directly as epic children instead of dropping them.
+    func testEpicWithOnlyBugAndTechDebtChildrenAttachesBoth() throws {
+        let epic = try makeItem(id: "1", type: "epic")
+        let epicBug = try makeItem(id: "80", type: "bug", parentId: "1")
+        let epicTechDebt = try makeItem(id: "90", type: "techdebt", parentId: "1")
+
+        sut.buildTree(from: [epic, epicBug, epicTechDebt])
+
+        let epicNode = sut.rootNodes[0]
+        XCTAssertEqual(epicNode.children.count, 2, "Epic attaches both epic-parented leaves as children")
+        let childIDs = Set(epicNode.children.map(\.id))
+        XCTAssertTrue(childIDs.contains("80"), "Epic-parented bug attaches directly to the epic")
+        XCTAssertTrue(childIDs.contains("90"), "Epic-parented techdebt attaches directly to the epic")
+        XCTAssertTrue(sut.orphanBugNodes.isEmpty, "Epic-parented bug is not orphaned")
+        XCTAssertTrue(sut.orphanTechDebtNodes.isEmpty, "Epic-parented techdebt is not orphaned")
+    }
+
+    /// Regression test for Bug 1: story-parented and parentless bug/techdebt items are
+    /// unaffected by the epic-attach fix — they keep their pre-fix placement.
+    func testStoryParentedAndParentlessItemsUnchangedByEpicAttachFix() throws {
+        let epic = try makeItem(id: "1", type: "epic")
+        let story = try makeItem(id: "10", type: "story", parentId: "1")
+        let storyBug = try makeItem(id: "50", type: "bug", parentId: "10")
+        let parentlessTechDebt = try makeItem(id: "88", type: "techdebt")
+
+        sut.buildTree(from: [epic, story, storyBug, parentlessTechDebt])
+
+        let epicNode = sut.rootNodes[0]
+        XCTAssertEqual(
+            epicNode.children.count, 1, "Epic has only its story child — the bug attaches to the story, not the epic")
+        let storyNode = epicNode.children[0]
+        XCTAssertEqual(storyNode.children.count, 1, "Story keeps its story-parented bug child")
+        XCTAssertEqual(storyNode.children[0].id, "50", "Story-parented bug still attaches to its story")
+        XCTAssertEqual(sut.orphanTechDebtNodes.count, 1, "Parentless techdebt is still orphaned")
+        XCTAssertEqual(sut.orphanTechDebtNodes[0].id, "88")
+    }
+
     // MARK: - buildTree: Task Count
 
     func testTaskCountExcludesEpicsAndStories() throws {
