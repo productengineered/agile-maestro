@@ -53,7 +53,34 @@ final class MockParserService: TaskParserServiceProtocol, @unchecked Sendable {
     /// Optional override for orphanedTasks returned in ParseResult.
     var orphanedTasksResult: [OrphanedTask] = []
 
+    /// When true, the *next* call to `loadTasks(from:)` suspends until the test
+    /// calls `resumeSuspendedLoad()`. Lets tests observe `SessionViewModel.state`
+    /// mid-refresh (task-7 regression coverage: background refresh must never
+    /// transition through `.loading`).
+    private var shouldSuspendNextLoad = false
+    private var suspensionContinuation: CheckedContinuation<Void, Never>?
+
+    /// True once a suspended `loadTasks` call is parked awaiting `resumeSuspendedLoad()`.
+    private(set) var isSuspended = false
+
+    func armSuspension() {
+        shouldSuspendNextLoad = true
+    }
+
+    func resumeSuspendedLoad() {
+        isSuspended = false
+        suspensionContinuation?.resume()
+        suspensionContinuation = nil
+    }
+
     func loadTasks(from directory: URL) async throws -> ParseResult {
+        if shouldSuspendNextLoad {
+            shouldSuspendNextLoad = false
+            isSuspended = true
+            await withCheckedContinuation { continuation in
+                suspensionContinuation = continuation
+            }
+        }
         let items = try loadTasksResult.get()
         return ParseResult(structuredTasks: items, claudeTasks: claudeTasksResult, orphanedTasks: orphanedTasksResult)
     }
@@ -119,6 +146,18 @@ final class SessionViewModelTests: XCTestCase {
         modifiedDate: Date = Date()
     ) -> TaskSession {
         TaskSession(id: id, path: path, modifiedDate: modifiedDate)
+    }
+
+    /// Polls (yielding to the MainActor between checks) until `mockParserService`
+    /// reports it has parked in a suspended `loadTasks` call, or `attempts` is
+    /// exhausted. Used to deterministically observe `SessionViewModel.state`
+    /// while a refresh is in flight.
+    private func waitForParserSuspension(attempts: Int = 50) async {
+        var remaining = attempts
+        while !mockParserService.isSuspended && remaining > 0 {
+            await Task.yield()
+            remaining -= 1
+        }
     }
 
     private func makeTaskItem(id: String) throws -> TaskItem {
@@ -363,20 +402,81 @@ final class SessionViewModelTests: XCTestCase {
         XCTAssertEqual(sut.state, .loaded)
     }
 
-    func testRefreshCurrentSessionOnErrorSetsErrorState() async {
-        // Select a session successfully, then simulate a failure on next refresh.
+    func testRefreshCurrentSessionFirstLoadOnErrorSetsErrorState() async {
+        // No prior loaded content — a failure on the very first load has nothing
+        // to preserve on screen, so it should transition to .error.
         let session = makeSession()
-        mockParserService.loadTasksResult = .success([])
+        mockParserService.loadTasksResult = .failure(AgileMaestroError.noTasksFound(path: session.path))
+
         await sut.selectSession(session)
 
-        // Now configure the parser to fail.
-        mockParserService.loadTasksResult = .failure(AgileMaestroError.noTasksFound(path: session.path))
-        await sut.refreshCurrentSession()
-
         guard case .error = sut.state else {
-            XCTFail("Expected .error state after failed refresh, got \(sut.state)")
+            XCTFail("Expected .error state after a failed first load, got \(sut.state)")
             return
         }
+    }
+
+    func testRefreshCurrentSessionFirstLoadTransitionsThroughLoadingThenLoaded() async {
+        // The very first load (state starts at .idle) should still show the
+        // full loading state while in flight, then reach .loaded.
+        let session = makeSession()
+        mockParserService.loadTasksResult = .success([])
+        mockParserService.armSuspension()
+
+        let selectTask = Task { await sut.selectSession(session) }
+        await waitForParserSuspension()
+
+        XCTAssertEqual(sut.state, .loading, "First load should show .loading while data is in flight")
+
+        mockParserService.resumeSuspendedLoad()
+        await selectTask.value
+
+        XCTAssertEqual(sut.state, .loaded)
+    }
+
+    func testRefreshCurrentSessionBackgroundRefreshNeverEntersLoadingState() async {
+        // First load succeeds, reaching .loaded with content on screen.
+        let session = makeSession()
+        let task1 = try? makeTaskItem(id: "1")
+        mockParserService.loadTasksResult = .success([task1].compactMap { $0 })
+        await sut.selectSession(session)
+        XCTAssertEqual(sut.state, .loaded)
+
+        // A background refresh (triggered by the file watcher or the refresh
+        // button) must keep existing content on screen — never swap to .loading —
+        // while new data loads.
+        mockParserService.armSuspension()
+        let refreshTask = Task { await sut.refreshCurrentSession() }
+        await waitForParserSuspension()
+
+        XCTAssertEqual(sut.state, .loaded, "Background refresh must not leave .loaded before new data arrives")
+        XCTAssertTrue(sut.isRefreshing, "Toolbar spinner should still indicate the refresh in progress")
+        XCTAssertEqual(sut.tasks.count, 1, "Existing content must remain visible during the background refresh")
+
+        mockParserService.resumeSuspendedLoad()
+        await refreshTask.value
+
+        XCTAssertEqual(sut.state, .loaded)
+    }
+
+    func testRefreshCurrentSessionBackgroundRefreshFailureKeepsLoadedStateAndData() async {
+        // First load succeeds with content.
+        let session = makeSession()
+        let task1 = try? makeTaskItem(id: "1")
+        mockParserService.loadTasksResult = .success([task1].compactMap { $0 })
+        await sut.selectSession(session)
+        XCTAssertEqual(sut.state, .loaded)
+        XCTAssertEqual(sut.tasks.count, 1)
+
+        // Background refresh fails — existing content must stay on screen instead
+        // of being replaced by ErrorStateView.
+        let refreshError = AgileMaestroError.noTasksFound(path: session.path)
+        mockParserService.loadTasksResult = .failure(refreshError)
+        await sut.refreshCurrentSession()
+
+        XCTAssertEqual(sut.state, .loaded, "Background refresh failure must not replace loaded content with .error")
+        XCTAssertEqual(sut.tasks.count, 1, "Prior task data must be preserved on a failed background refresh")
+        XCTAssertNotNil(sut.refreshError, "Failure should be recorded non-destructively for the refresh indicator")
     }
 
     // MARK: - selectSession

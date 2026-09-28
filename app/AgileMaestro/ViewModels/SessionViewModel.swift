@@ -80,6 +80,16 @@ final class SessionViewModel {
     /// Whether a refresh is currently in progress. Drives `arrow.clockwise` rotation.
     private(set) var isRefreshing: Bool = false
 
+    /// Non-blocking error from the most recent **background** refresh (a refresh
+    /// that started from `.loaded`), if any. Cleared on the next successful refresh.
+    ///
+    /// Distinct from `state = .error(...)`: that transition is reserved for failures
+    /// with no prior loaded content to preserve. A background-refresh failure keeps
+    /// `state == .loaded` and existing `tasks`/`claudeTasks`/`orphanedTasks` on screen,
+    /// recording the failure here instead so the refresh indicator can surface it
+    /// without tearing down the visible content (see task-7).
+    private(set) var refreshError: AgileMaestroError?
+
     /// Relative time string for the last refresh ("just now", "2m ago", "1h ago").
     /// Returns an empty string if the session has never been refreshed.
     var lastRefreshedText: String {
@@ -426,7 +436,13 @@ final class SessionViewModel {
     /// Reloads task data from the currently selected session directory.
     ///
     /// Updates `tasks`, `parsedCount`, `totalCount`, and `lastRefreshed`.
-    /// Sets `state` to `.loaded` on success or `.error` on failure.
+    /// On success, sets `state` to `.loaded` and clears `refreshError`.
+    /// On failure: if there is no prior loaded content (first load, or recovering
+    /// from a previous error), sets `state` to `.error`. If content is already
+    /// `.loaded` (a background refresh), `state` stays `.loaded` — the existing
+    /// content remains on screen — and the failure is recorded in `refreshError`
+    /// instead, so a background refresh never tears down and replaces visible
+    /// content with a loading spinner or error view (see task-7).
     /// Sets `isRefreshing` to `true` while the reload is in progress.
     func refreshCurrentSession() async {
         guard let session = selectedSession else {
@@ -434,8 +450,16 @@ final class SessionViewModel {
             return
         }
 
+        // Only show the full loading state for a first load or when recovering
+        // from an error. A background refresh (state already .loaded) keeps its
+        // content on screen and relies on `isRefreshing` (the toolbar spinner)
+        // instead of tearing down the view hierarchy.
+        let isBackgroundRefresh = state == .loaded
+
         isRefreshing = true
-        state = .loading
+        if !isBackgroundRefresh {
+            state = .loading
+        }
         defer { isRefreshing = false }
         do {
             let parseResult = try await parserService.loadTasks(from: session.path)
@@ -447,33 +471,48 @@ final class SessionViewModel {
             totalCount = loaded.count
             lastRefreshed = Date()
             state = .loaded
+            refreshError = nil
             checkProductStaleness()
             let structured = loaded.count
             let claude = parseResult.claudeTasks.count
             let orphaned = parseResult.orphanedTasks.count
             logger.info("Refreshed: \(structured) structured, \(claude) claude, \(orphaned) orphaned")
 
-            // Fire-and-forget backup: runs in the background without blocking the refresh.
-            // Only backs up when a product is selected (provides the backup destination).
-            if let product = selectedProduct {
-                let source = session.path
-                let destination = product.backupDirectoryURL
-                let backupService = backupService
-                Task {
-                    do {
-                        try await backupService.performBackup(from: source, to: destination)
-                        Logger.backup.info("Backup succeeded for session '\(session.displayName)'")
-                    } catch {
-                        Logger.backup.error("Backup failed for session '\(session.displayName)': \(error)")
-                    }
-                }
-            }
+            scheduleBackupIfNeeded(for: session)
         } catch let error as AgileMaestroError {
-            logger.error("Refresh failed: \(error.localizedDescription)")
-            state = .error(error)
+            handleRefreshFailure(error, isBackgroundRefresh: isBackgroundRefresh)
         } catch {
-            logger.error("Refresh failed: \(error.localizedDescription)")
-            state = .error(.noTasksFound(path: session.path))
+            handleRefreshFailure(.noTasksFound(path: session.path), isBackgroundRefresh: isBackgroundRefresh)
+        }
+    }
+
+    /// Fire-and-forget backup: runs in the background without blocking the refresh.
+    /// Only backs up when a product is selected (provides the backup destination).
+    private func scheduleBackupIfNeeded(for session: TaskSession) {
+        guard let product = selectedProduct else { return }
+        let source = session.path
+        let destination = product.backupDirectoryURL
+        let backupService = backupService
+        Task {
+            do {
+                try await backupService.performBackup(from: source, to: destination)
+                Logger.backup.info("Backup succeeded for session '\(session.displayName)'")
+            } catch {
+                Logger.backup.error("Backup failed for session '\(session.displayName)': \(error)")
+            }
+        }
+    }
+
+    /// Records a refresh failure. A background refresh (content already `.loaded`)
+    /// keeps `state == .loaded` and stores the failure in `refreshError` instead of
+    /// tearing down visible content; a first-load/recovery failure transitions to
+    /// `.error` since there is nothing on screen to preserve.
+    private func handleRefreshFailure(_ error: AgileMaestroError, isBackgroundRefresh: Bool) {
+        logger.error("Refresh failed: \(error.localizedDescription)")
+        if isBackgroundRefresh {
+            refreshError = error
+        } else {
+            state = .error(error)
         }
     }
 
