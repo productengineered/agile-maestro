@@ -318,6 +318,30 @@ final class TreeViewModelTests: XCTestCase {
         XCTAssertEqual(sut.orphanTechDebtNodes[0].id, "88")
     }
 
+    /// Regression test for the CodeRabbit perf fix (task-1): epic-linked leaves are
+    /// grouped by resolved parent ID once, up front, instead of being resolved
+    /// per-epic. Verifies the grouping is correct — each epic receives ONLY its own
+    /// leaves, never a sibling epic's — across multiple epics with interleaved
+    /// bug/techdebt parentage.
+    func testMultipleEpicsEachReceiveOnlyTheirOwnEpicParentedLeaves() throws {
+        let epic1 = try makeItem(id: "1", type: "epic")
+        let epic2 = try makeItem(id: "2", type: "epic")
+        let epic1Bug = try makeItem(id: "80", type: "bug", parentId: "1")
+        let epic1TechDebt = try makeItem(id: "81", type: "techdebt", parentId: "1")
+        let epic2Bug = try makeItem(id: "90", type: "bug", parentId: "2")
+
+        sut.buildTree(from: [epic1, epic2, epic1Bug, epic1TechDebt, epic2Bug])
+
+        XCTAssertEqual(sut.rootNodes.count, 2)
+        let epic1Node = try XCTUnwrap(sut.rootNodes.first { $0.id == "1" })
+        let epic2Node = try XCTUnwrap(sut.rootNodes.first { $0.id == "2" })
+
+        XCTAssertEqual(epic1Node.children.map(\.id), ["80", "81"], "Epic 1 gets only its own leaves, in order")
+        XCTAssertEqual(epic2Node.children.map(\.id), ["90"], "Epic 2 gets only its own leaf")
+        XCTAssertTrue(sut.orphanBugNodes.isEmpty)
+        XCTAssertTrue(sut.orphanTechDebtNodes.isEmpty)
+    }
+
     // MARK: - buildTree: Task Count
 
     func testTaskCountExcludesEpicsAndStories() throws {

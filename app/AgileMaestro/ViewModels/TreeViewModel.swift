@@ -272,18 +272,28 @@ final class TreeViewModel {
         leafItems: [TaskItem],
         expandedIDs: Set<String>
     ) -> [TreeNode] {
-        epics.map { epic in
+        // Resolve each epic-linkable leaf's (bug/techdebt) parent ID ONCE, up
+        // front, instead of re-resolving it inside the per-epic `.filter` below
+        // (which was an O(epics * leaves * tasks) linear-scan fallback inside
+        // `resolvedParentId(in:)` for every epic × leaf pair). Grouping by
+        // resolved parent ID makes the per-epic lookup an O(1) dictionary read.
+        let epicLinkedLeaves = leafItems.filter { $0.type == .bug || $0.type == .techdebt }
+        var leavesByResolvedParent: [String: [TaskItem]] = [:]
+        for leaf in epicLinkedLeaves {
+            guard let parentId = leaf.resolvedParentId(in: allTasks) else { continue }
+            leavesByResolvedParent[parentId, default: []].append(leaf)
+        }
+
+        return epics.map { epic in
             let storyChildren = stories
                 .filter { $0.resolvedParentId(in: allTasks) == epic.id }
                 .compactMap { storyNodes[$0.id] }
             // Bugs/techdebt parented directly to this epic render as epic children
             // too, appended AFTER the story children so existing ordering
-            // assumptions (epic.children[0] == first story) keep holding.
-            let leafChildren = leafItems
-                .filter {
-                    guard $0.type == .bug || $0.type == .techdebt else { return false }
-                    return $0.resolvedParentId(in: allTasks) == epic.id
-                }
+            // assumptions (epic.children[0] == first story) keep holding. Leaf
+            // order within the group matches `epicLinkedLeaves`'s original order
+            // (dictionary values preserve insertion order per key).
+            let leafChildren = (leavesByResolvedParent[epic.id] ?? [])
                 .map { makeNode($0, expandedIDs: expandedIDs) }
             let node = TreeNode(task: epic, children: storyChildren + leafChildren)
             node.isExpanded = expandedIDs.contains(epic.id)
