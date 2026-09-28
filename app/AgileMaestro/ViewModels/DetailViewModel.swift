@@ -225,6 +225,20 @@ final class DetailViewModel {
         sessionTasks.filter { $0.resolvedParentId(in: sessionTasks) == story.id && $0.isTask }
     }
 
+    /// Returns bugs and tech debt items parented directly to the given epic (not via a story).
+    ///
+    /// Mirrors `TreeViewModel.buildEpicNodes`'s epic-attach rule (task-1 fix): a bug or techdebt
+    /// item whose resolved parent is the epic itself — rather than one of the epic's child
+    /// stories — is an epic-linked item. Previously these were silently excluded from the Epic
+    /// Overview tab because `childStories` only matches `.story` type. Used by
+    /// `EpicOverviewContent` to populate the "Linked Items" card.
+    func linkedItems(of epic: TaskItem) -> [TaskItem] {
+        sessionTasks.filter { item in
+            (item.type == .bug || item.type == .techdebt)
+                && item.resolvedParentId(in: sessionTasks) == epic.id
+        }
+    }
+
     /// Returns the total number of leaf tasks across all child stories of an epic.
     ///
     /// Counts tasks, bugs, and techdebt items whose resolved parent ID matches any child story's id.

@@ -46,6 +46,9 @@ private struct EpicOverviewContent: View {
     // Children stories resolved from session
     private var childStories: [TaskItem] { viewModel.childStories(of: task) }
 
+    // Bugs/techdebt parented directly to this epic (not via a story)
+    private var linkedItems: [TaskItem] { viewModel.linkedItems(of: task) }
+
     var body: some View {
         // Goal hero card (first — highest-leverage orientation element)
         if let goal = task.metadata.epic?.goal, !goal.isEmpty {
@@ -83,6 +86,27 @@ private struct EpicOverviewContent: View {
                             withAnimation(.easeInOut(duration: 0.2)) {
                                 viewModel.navigate(to: story)
                                 treeViewModel.revealTask(story.id)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Linked Items card — bugs/techdebt parented directly to this epic (not via a story)
+        if !linkedItems.isEmpty {
+            CardView(title: "Linked Items", icon: "link.badge.plus", iconColor: .orange) {
+                VStack(spacing: 0) {
+                    linkedItemsTableHeader
+                        .padding(.bottom, 8)
+
+                    Divider()
+
+                    ForEach(sortedLinkedItems) { item in
+                        TaskTableRow(taskItem: item) {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                viewModel.navigate(to: item)
+                                treeViewModel.revealTask(item.id)
                             }
                         }
                     }
@@ -149,6 +173,28 @@ private struct EpicOverviewContent: View {
     private var sortedStories: [TaskItem] {
         // in-progress first, pending second (orange dot), completed last
         childStories.sorted { $0.status.sortRank < $1.status.sortRank }
+    }
+
+    private var linkedItemsTableHeader: some View {
+        HStack(spacing: 0) {
+            Text("STATUS")
+                .frame(width: 60, alignment: .leading)
+            Text("ITEM")
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text("TYPE")
+                .frame(width: 60, alignment: .trailing)
+            Text("PRIORITY")
+                .frame(width: 60, alignment: .trailing)
+        }
+        .font(.system(size: 9, weight: .medium))
+        .foregroundStyle(.tertiary)
+        .textCase(.uppercase)
+        .tracking(0.5)
+    }
+
+    private var sortedLinkedItems: [TaskItem] {
+        // in-progress first, pending second, completed last
+        linkedItems.sorted { $0.status.sortRank < $1.status.sortRank }
     }
 }
 

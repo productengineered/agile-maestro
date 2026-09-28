@@ -367,4 +367,67 @@ final class DetailViewModelTests: XCTestCase {
                            "availableTabs mismatch for type '\(type.rawValue)'")
         }
     }
+
+    // MARK: - linkedItems(of:): Epic-Parented Bugs/TechDebt (TechDebt-2 fix)
+
+    /// Regression test for TechDebt 2: a bug parented directly to an epic must be surfaced
+    /// by `linkedItems(of:)` so the Epic Overview tab does not silently hide it.
+    func testLinkedItemsIncludesEpicParentedBug() throws {
+        let epic = try makeItem(id: "1", type: "epic")
+        let epicBug = try makeItem(id: "80", type: "bug", parentId: "1")
+        sut.setTask(epic, tasks: [epic, epicBug])
+
+        let linked = sut.linkedItems(of: epic)
+
+        XCTAssertEqual(linked.map(\.id), ["80"], "Epic-parented bug is surfaced as a linked item")
+    }
+
+    /// Regression test for TechDebt 2: a techdebt item parented directly to an epic must be
+    /// surfaced by `linkedItems(of:)`.
+    func testLinkedItemsIncludesEpicParentedTechDebt() throws {
+        let epic = try makeItem(id: "1", type: "epic")
+        let epicTechDebt = try makeItem(id: "90", type: "techdebt", parentId: "1")
+        sut.setTask(epic, tasks: [epic, epicTechDebt])
+
+        let linked = sut.linkedItems(of: epic)
+
+        XCTAssertEqual(linked.map(\.id), ["90"], "Epic-parented techdebt is surfaced as a linked item")
+    }
+
+    /// Regression test for TechDebt 2: bugs/techdebt parented to a child STORY (not the epic
+    /// itself) must NOT appear in `linkedItems(of:)` — they belong to the story's task table.
+    func testLinkedItemsExcludesStoryParentedItems() throws {
+        let epic = try makeItem(id: "1", type: "epic")
+        let story = try makeItem(id: "10", type: "story", parentId: "1")
+        let storyBug = try makeItem(id: "50", type: "bug", parentId: "10")
+        sut.setTask(epic, tasks: [epic, story, storyBug])
+
+        let linked = sut.linkedItems(of: epic)
+
+        XCTAssertTrue(linked.isEmpty, "Story-parented bug must not appear as an epic-linked item")
+    }
+
+    /// Regression test for TechDebt 2: `linkedItems(of:)` must not include child stories or
+    /// their descendant tasks — only bug/techdebt items parented directly to the epic.
+    func testLinkedItemsExcludesStoriesAndTasks() throws {
+        let epic = try makeItem(id: "1", type: "epic")
+        let story = try makeItem(id: "10", type: "story", parentId: "1")
+        let epicTask = try makeItem(id: "20", type: "task", parentId: "1")
+        let epicBug = try makeItem(id: "80", type: "bug", parentId: "1")
+        sut.setTask(epic, tasks: [epic, story, epicTask, epicBug])
+
+        let linked = sut.linkedItems(of: epic)
+
+        XCTAssertEqual(linked.map(\.id), ["80"],
+                       "Only the epic-parented bug qualifies — story and task types are excluded")
+    }
+
+    /// An epic with no directly-parented bug/techdebt returns an empty array.
+    func testLinkedItemsEmptyWhenNoneParentedToEpic() throws {
+        let epic = try makeItem(id: "1", type: "epic")
+        let story = try makeItem(id: "10", type: "story", parentId: "1")
+        sut.setTask(epic, tasks: [epic, story])
+
+        XCTAssertTrue(sut.linkedItems(of: epic).isEmpty)
+    }
 }
