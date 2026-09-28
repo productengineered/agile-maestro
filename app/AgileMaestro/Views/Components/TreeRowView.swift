@@ -4,13 +4,13 @@ import SwiftUI
 
 /// Single row in the task tree sidebar.
 ///
-/// Renders: indentation spacer, chevron (if parent node), TypeIconView, number
-/// label (`task.id`, matching the `.json` filename), title text, spacer, child
-/// count badge (if parent node), and StatusDotView.
+/// Renders: indentation spacer, chevron (if parent node), TypeIconView, numbered
+/// title (e.g. "88 - TechDebt: sign-in..."), spacer, child count badge (if parent
+/// node), and StatusDotView.
 ///
-/// The number leads the subject (e.g. "88 - TechDebt: sign-in...") so LLM agents
-/// and users can match a row to its task file at a glance. It is pinned to a fixed
-/// size and given layout priority so it never truncates — only the subject does.
+/// The number leads the subject as part of the title text so LLM agents and users
+/// can match a row to its task file at a glance. The number uses the same font,
+/// size, weight, and color as the title (.callout, .primary, lineLimit/truncation).
 ///
 /// Responds to selection (`.accentColor.opacity(0.15)` background) and hover
 /// (`.secondary.opacity(0.05)` background) state changes with animated fills.
@@ -42,9 +42,7 @@ struct TreeRowView: View {
             TypeIconView(type: node.task.type, size: 11)
                 .accessibilityHidden(true)
 
-            numberLabel
-
-            Text(node.task.subject)
+            Text(node.task.numberedSubject)
                 .font(.callout)
                 .foregroundStyle(.primary)
                 .lineLimit(1)
@@ -114,22 +112,6 @@ struct TreeRowView: View {
             Spacer()
                 .frame(width: 24)
         }
-    }
-
-    /// The row's leading number (`task.id`, matching the `.json` filename). Uses
-    /// the same token treatment as the detail card's number badge (caption,
-    /// medium weight, tertiary, monospaced digits) for visual consistency.
-    /// `.fixedSize` + `.layoutPriority(1)` guarantee it never truncates or
-    /// compresses — only `subject` gives up space when the row is narrow.
-    private var numberLabel: some View {
-        Text("\(node.task.id) -")
-            .font(.caption)
-            .fontWeight(.medium)
-            .foregroundStyle(.tertiary)
-            .monospacedDigit()
-            .lineLimit(1)
-            .fixedSize(horizontal: true, vertical: false)
-            .layoutPriority(1)
     }
 
     private var childCountBadge: some View {
