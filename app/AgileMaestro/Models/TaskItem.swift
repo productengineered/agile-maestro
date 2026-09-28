@@ -239,4 +239,16 @@ extension TaskItem {
     var shortId: String {
         displayId ?? "#\(id)"
     }
+
+    /// A row-leading label pairing the task's numeric identifier — which matches its
+    /// `.json` filename stem, e.g. id `"5"` for the file `5.json` — with its subject,
+    /// e.g. "88 - TechDebt: sign-in...".
+    ///
+    /// Sidebar tree rows lead with this number so LLM agents and users can match a
+    /// row to its underlying task file at a glance. This is the single source used
+    /// for both the row's accessibility label and its unit tests — reuse it rather
+    /// than re-deriving the number elsewhere.
+    var numberedSubject: String {
+        "\(id) - \(subject)"
+    }
 }

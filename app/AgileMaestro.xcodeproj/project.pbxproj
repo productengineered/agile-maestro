@@ -66,6 +66,7 @@
 		B6262D9B3BBEE59BBFE1EBD3 /* EpicMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = A94CC33BFC264E777D9FF9DD /* EpicMetadata.swift */; };
 		B7A51197B6244DFC6B466974 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D949E98F091F747B66E6F2D6 /* ContentView.swift */; };
 		B826B455B647612676461CD6 /* TaskItemDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05DC19DDA40D48DF34DF5CD3 /* TaskItemDecodingTests.swift */; };
+		15A4F08ABA544699BDC5FB82 /* TaskItemNumberedSubjectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2ECCBA1193242A78D740A0C /* TaskItemNumberedSubjectTests.swift */; };
 		B9EF18DC6E452A72AEBE49C3 /* BackupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBAF651D4AAEDC455998DEEB /* BackupService.swift */; };
 		BC2DEE112137E05317309D3A /* KanbanCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD976FD242804621D14ED604 /* KanbanCard.swift */; };
 		BEDD4EB77E82BA47E81B3671 /* TaskMetadataContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35ABC18F5B104272E885955D /* TaskMetadataContainer.swift */; };
@@ -203,6 +204,7 @@
 		6EBD5BBEA29F4401917F39F8 /* WindowReplayPlannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowReplayPlannerTests.swift; sourceTree = "<group>"; };
 		B03875368F91476986F4123B /* WindowRegistrySaveCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowRegistrySaveCoordinatorTests.swift; sourceTree = "<group>"; };
 		05DC19DDA40D48DF34DF5CD3 /* TaskItemDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskItemDecodingTests.swift; sourceTree = "<group>"; };
+		E2ECCBA1193242A78D740A0C /* TaskItemNumberedSubjectTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskItemNumberedSubjectTests.swift; sourceTree = "<group>"; };
 		0FBDC3CEA6B49B8150DAAE3A /* TaskParserServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskParserServiceProtocol.swift; sourceTree = "<group>"; };
 		1177DF89E312D30D1F76D0AE /* SuggestedInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedInput.swift; sourceTree = "<group>"; };
 		11A58A0D3E698D727829F947 /* References.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = References.swift; sourceTree = "<group>"; };
@@ -520,6 +522,7 @@
 				525F8CD3791061F990482CC9 /* MarkdownSectionParserTests.swift */,
 				1EBD2606EE155EEDBC7737D4 /* ProductServiceTests.swift */,
 				05DC19DDA40D48DF34DF5CD3 /* TaskItemDecodingTests.swift */,
+				E2ECCBA1193242A78D740A0C /* TaskItemNumberedSubjectTests.swift */,
 				68DFBC7D3143159C4802A7CF /* TaskParserServiceTests.swift */,
 				59F39EE823218AF1CB4DE29F /* TaskSessionServiceTests.swift */,
 				DCD60AC62F5E5D33001961EE /* TreeViewModelTests.swift */,
@@ -824,6 +827,7 @@
 				550E5B328DB46AC70A161E50 /* MarkdownSectionParserTests.swift in Sources */,
 				173DA1B1B703E4D3F9CDDC1C /* ProductServiceTests.swift in Sources */,
 				B826B455B647612676461CD6 /* TaskItemDecodingTests.swift in Sources */,
+				15A4F08ABA544699BDC5FB82 /* TaskItemNumberedSubjectTests.swift in Sources */,
 				F66BD5552F801CCE00A30480 /* ProductSheetViewModelTests.swift in Sources */,
 				F66BD52C2F78482B00A30480 /* TeamViewModelTests.swift in Sources */,
 				F66BD5422F7B0D2D00A30480 /* BugViewTests.swift in Sources */,
