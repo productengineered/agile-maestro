@@ -10,6 +10,11 @@ import os
 ///   attaches tasks to matching story parents, and attaches bugs/techdebt to
 ///   matching story OR epic parents (bugs/techdebt attached to an epic render
 ///   as epic children, after the epic's story children).
+/// - Nests tasks whose parent is a bug or tech debt item as children of that
+///   bug/techdebt node, wherever it renders (under a story, under an epic, or
+///   in the loose Bugs/Tech Debt sections) — those tasks are excluded from the
+///   loose Tasks section. Node-builder methods live in
+///   `TreeViewModel+NodeBuilding.swift`.
 /// - Separates orphan bugs and techdebt (items whose parent doesn't match any
 ///   epic in the current set) into dedicated sections.
 /// - Tracks `selectedNodeID` and `selectedTask` for sidebar selection.
@@ -17,7 +22,6 @@ import os
 /// - Exposes `taskCountText` for the sidebar header badge.
 @Observable
 @MainActor
-// swiftlint:disable:next type_body_length
 final class TreeViewModel {
 
     // MARK: - UserDefaults Keys
@@ -100,8 +104,9 @@ final class TreeViewModel {
     /// Session ID used to key UserDefaults expand state.
     private var sessionID: String = ""
 
-    /// Flat list of all task items in the current session.
-    private var allTasks: [TaskItem] = []
+    /// Flat list of all task items in the current session. Read (not written)
+    /// by the node-builder methods in `TreeViewModel+NodeBuilding.swift`.
+    private(set) var allTasks: [TaskItem] = []
 
     // MARK: - Computed Properties
 
@@ -152,46 +157,20 @@ final class TreeViewModel {
         self.sessionID = sessionID
         self.allTasks = tasks
 
-        let expandedIDs = loadExpandedIDs()
         let epics = tasks.filter { $0.type == .epic }
         let stories = tasks.filter { $0.type == .story }
         let leafItems = tasks.filter { $0.type == .task || $0.type == .bug || $0.type == .techdebt }
+        let context = makeBuildContext(
+            epics: epics, stories: stories, leafItems: leafItems, expandedIDs: loadExpandedIDs())
 
-        let epicIDSet = Set(epics.map(\.id))
-        let storyIDSet = Set(stories.map(\.id))
-
-        let storyNodes = buildStoryNodes(
-            stories: stories, leafItems: leafItems, expandedIDs: expandedIDs)
+        let storyNodes = buildStoryNodes(stories: stories, leafItems: leafItems, context: context)
         let epicNodes = buildEpicNodes(
-            epics: epics,
-            stories: stories,
-            storyNodes: storyNodes,
-            leafItems: leafItems,
-            expandedIDs: expandedIDs
-        )
+            epics: epics, stories: stories, storyNodes: storyNodes, leafItems: leafItems, context: context)
 
         rootNodes = epicNodes
-        orphanBugNodes = buildOrphanNodes(
-            taskType: .bug,
-            leafItems: leafItems,
-            epicIDSet: epicIDSet,
-            storyIDSet: storyIDSet,
-            expandedIDs: expandedIDs
-        )
-        orphanTechDebtNodes = buildOrphanNodes(
-            taskType: .techdebt,
-            leafItems: leafItems,
-            epicIDSet: epicIDSet,
-            storyIDSet: storyIDSet,
-            expandedIDs: expandedIDs
-        )
-        orphanTaskNodes = buildOrphanNodes(
-            taskType: .task,
-            leafItems: leafItems,
-            epicIDSet: epicIDSet,
-            storyIDSet: storyIDSet,
-            expandedIDs: expandedIDs
-        )
+        orphanBugNodes = buildOrphanNodes(taskType: .bug, leafItems: leafItems, context: context)
+        orphanTechDebtNodes = buildOrphanNodes(taskType: .techdebt, leafItems: leafItems, context: context)
+        orphanTaskNodes = buildOrphanNodes(taskType: .task, leafItems: leafItems, context: context)
 
         // Clear the selection when the selected task no longer exists in the new
         // task set — e.g. when navigating to an empty directory.
@@ -243,94 +222,6 @@ final class TreeViewModel {
         let claudeCount = self.claudeTasks.count
         let orphanCount = self.orphanedTasks.count
         logger.info("setClaudeTasks: \(claudeCount) claude tasks, \(orphanCount) orphaned tasks")
-    }
-
-    private func buildStoryNodes(
-        stories: [TaskItem],
-        leafItems: [TaskItem],
-        expandedIDs: Set<String>
-    ) -> [String: TreeNode] {
-        var storyNodes: [String: TreeNode] = [:]
-        for story in stories {
-            let children: [TreeNode] = leafItems
-                .filter {
-                    guard $0.type == .task || $0.type == .bug || $0.type == .techdebt else { return false }
-                    return $0.resolvedParentId(in: allTasks) == story.id
-                }
-                .map { makeNode($0, expandedIDs: expandedIDs) }
-            let node = TreeNode(task: story, children: children)
-            node.isExpanded = expandedIDs.contains(story.id)
-            storyNodes[story.id] = node
-        }
-        return storyNodes
-    }
-
-    private func buildEpicNodes(
-        epics: [TaskItem],
-        stories: [TaskItem],
-        storyNodes: [String: TreeNode],
-        leafItems: [TaskItem],
-        expandedIDs: Set<String>
-    ) -> [TreeNode] {
-        // Resolve each epic-linkable leaf's (bug/techdebt) parent ID ONCE, up
-        // front, instead of re-resolving it inside the per-epic `.filter` below
-        // (which was an O(epics * leaves * tasks) linear-scan fallback inside
-        // `resolvedParentId(in:)` for every epic × leaf pair). Grouping by
-        // resolved parent ID makes the per-epic lookup an O(1) dictionary read.
-        let epicLinkedLeaves = leafItems.filter { $0.type == .bug || $0.type == .techdebt }
-        var leavesByResolvedParent: [String: [TaskItem]] = [:]
-        for leaf in epicLinkedLeaves {
-            guard let parentId = leaf.resolvedParentId(in: allTasks) else { continue }
-            leavesByResolvedParent[parentId, default: []].append(leaf)
-        }
-
-        return epics.map { epic in
-            let storyChildren = stories
-                .filter { $0.resolvedParentId(in: allTasks) == epic.id }
-                .compactMap { storyNodes[$0.id] }
-            // Bugs/techdebt parented directly to this epic render as epic children
-            // too, appended AFTER the story children so existing ordering
-            // assumptions (epic.children[0] == first story) keep holding. Leaf
-            // order within the group matches `epicLinkedLeaves`'s original order
-            // (dictionary values preserve insertion order per key).
-            let leafChildren = (leavesByResolvedParent[epic.id] ?? [])
-                .map { makeNode($0, expandedIDs: expandedIDs) }
-            let node = TreeNode(task: epic, children: storyChildren + leafChildren)
-            node.isExpanded = expandedIDs.contains(epic.id)
-            return node
-        }
-    }
-
-    private func buildOrphanNodes(
-        taskType: TaskType,
-        leafItems: [TaskItem],
-        epicIDSet: Set<String>,
-        storyIDSet: Set<String>,
-        expandedIDs: Set<String>
-    ) -> [TreeNode] {
-        // Tasks (.task type) have stories as their valid parents, not epics.
-        // A task whose resolved parent matches an epic ID is therefore orphaned.
-        // Bugs and techdebt treat both epic and story IDs as valid parents because
-        // buildEpicNodes and buildStoryNodes both attach them directly as children
-        // of a matching epic or story; this filter only needs to exclude those
-        // already-attached items from the orphan sections below.
-        let validParentIDs: Set<String> = taskType == .task
-            ? storyIDSet
-            : epicIDSet.union(storyIDSet)
-
-        return leafItems
-            .filter { item in
-                guard item.type == taskType else { return false }
-                guard let parentId = item.resolvedParentId(in: allTasks) else { return true }
-                return !validParentIDs.contains(parentId)
-            }
-            .map { makeNode($0, expandedIDs: expandedIDs) }
-    }
-
-    private func makeNode(_ item: TaskItem, expandedIDs: Set<String>) -> TreeNode {
-        let node = TreeNode(task: item)
-        node.isExpanded = expandedIDs.contains(item.id)
-        return node
     }
 
     /// Selects the given node, updating `selectedNodeID` and `selectedTask`.

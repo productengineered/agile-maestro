@@ -342,6 +342,78 @@ final class TreeViewModelTests: XCTestCase {
         XCTAssertTrue(sut.orphanTechDebtNodes.isEmpty)
     }
 
+    // MARK: - buildTree: Tasks Nested Under Bug/TechDebt Parents (TechDebt 4 fix)
+
+    /// A task parented to a story-parented bug must nest under that bug node
+    /// (not appear flat in the loose Tasks section).
+    func testTaskUnderStoryParentedBugNests() throws {
+        let epic = try makeItem(id: "1", type: "epic")
+        let story = try makeItem(id: "10", type: "story", parentId: "1")
+        let storyBug = try makeItem(id: "50", type: "bug", parentId: "10")
+        let bugTask = try makeItem(id: "51", type: "task", parentId: "50")
+
+        sut.buildTree(from: [epic, story, storyBug, bugTask])
+
+        let storyNode = sut.rootNodes[0].children[0]
+        let bugNode = try XCTUnwrap(storyNode.children.first { $0.id == "50" })
+        XCTAssertEqual(bugNode.children.map(\.id), ["51"], "Task nests under the story-parented bug")
+        XCTAssertTrue(sut.orphanTaskNodes.isEmpty, "Bug-parented task must not appear in the loose Tasks section")
+    }
+
+    /// A task parented to an epic-parented techdebt item must nest under that
+    /// techdebt node (not appear flat in the loose Tasks section).
+    func testTaskUnderEpicParentedTechDebtNests() throws {
+        let epic = try makeItem(id: "1", type: "epic")
+        let epicTechDebt = try makeItem(id: "90", type: "techdebt", parentId: "1")
+        let tdTask = try makeItem(id: "91", type: "task", parentId: "90")
+
+        sut.buildTree(from: [epic, epicTechDebt, tdTask])
+
+        let epicNode = sut.rootNodes[0]
+        let techDebtNode = try XCTUnwrap(epicNode.children.first { $0.id == "90" })
+        XCTAssertEqual(techDebtNode.children.map(\.id), ["91"], "Task nests under the epic-parented techdebt")
+        XCTAssertTrue(sut.orphanTaskNodes.isEmpty, "TechDebt-parented task must not appear in the loose Tasks section")
+    }
+
+    /// A task parented to a parentless (orphaned) bug must nest under that bug's
+    /// node in the loose Bugs section, not appear separately in the loose Tasks section.
+    func testTaskUnderParentlessBugNestsInOrphanBugSection() throws {
+        let orphanBug = try makeItem(id: "70", type: "bug")
+        let bugTask = try makeItem(id: "71", type: "task", parentId: "70")
+
+        sut.buildTree(from: [orphanBug, bugTask])
+
+        XCTAssertEqual(sut.orphanBugNodes.count, 1)
+        XCTAssertEqual(sut.orphanBugNodes[0].children.map(\.id), ["71"], "Task nests under the orphaned bug")
+        XCTAssertTrue(sut.orphanTaskNodes.isEmpty, "Bug-parented task must not appear in the loose Tasks section")
+    }
+
+    /// The child-count badge (backed by `node.children.count`) reflects nested
+    /// tasks on a bug/techdebt node.
+    func testBugNodeChildCountReflectsNestedTasks() throws {
+        let orphanBug = try makeItem(id: "70", type: "bug")
+        let bugTaskA = try makeItem(id: "71", type: "task", parentId: "70")
+        let bugTaskB = try makeItem(id: "72", type: "task", parentId: "70")
+
+        sut.buildTree(from: [orphanBug, bugTaskA, bugTaskB])
+
+        XCTAssertEqual(sut.orphanBugNodes[0].children.count, 2)
+    }
+
+    /// A plain, story-parented task (no bug/techdebt involved) is unaffected by
+    /// the nesting fix — it keeps attaching directly to its story.
+    func testStoryParentedTaskUnchangedByNestingFix() throws {
+        let epic = try makeItem(id: "1", type: "epic")
+        let story = try makeItem(id: "10", type: "story", parentId: "1")
+        let storyTask = try makeItem(id: "20", type: "task", parentId: "10")
+
+        sut.buildTree(from: [epic, story, storyTask])
+
+        let storyNode = sut.rootNodes[0].children[0]
+        XCTAssertEqual(storyNode.children.map(\.id), ["20"], "Plain story-parented task attaches to its story")
+        XCTAssertTrue(sut.orphanTaskNodes.isEmpty)
+    }
+
     // MARK: - buildTree: Task Count
 
     func testTaskCountExcludesEpicsAndStories() throws {
